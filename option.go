@@ -3,7 +3,6 @@ package vegeta
 import (
 	"bytes"
 	"fmt"
-	"os"
 
 	"reflect"
 
@@ -26,7 +25,6 @@ func (opts *Options) parse(argv []string) ([]string, error) {
 	p := flags.NewParser(opts, flags.None)
 	args, err := p.ParseArgs(argv)
 	if err != nil {
-		os.Stderr.Write(opts.usage())
 		return nil, errors.Wrap(err, "invalid command line options")
 	}
 	return args, nil

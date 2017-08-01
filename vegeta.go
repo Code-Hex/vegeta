@@ -3,6 +3,7 @@ package vegeta
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -25,6 +26,8 @@ const (
 	name    = "vegeta"
 	msg     = name + " project to collect large amounts of vegetable data using IoT"
 )
+
+var stdout io.Writer = os.Stdout
 
 // Vegeta is context for this application
 type Vegeta struct {
@@ -50,7 +53,6 @@ func New() *Vegeta {
 
 // Run will serve
 func (v *Vegeta) Run() int {
-
 	if e := v.run(); e != nil {
 		exitCode, err := UnwrapErrors(e)
 		if v.StackTrace {
@@ -143,14 +145,15 @@ func genLoggerConfig() zap.Config {
 func parseOptions(opts *Options, argv []string) ([]string, error) {
 	o, err := opts.parse(argv)
 	if err != nil {
+		stdout.Write(opts.usage())
 		return nil, exit.MakeDataErr(err)
 	}
-	if opts.Help {
-		os.Stdout.Write(opts.usage())
+	if opts.Version {
+		fmt.Fprintf(stdout, "%s: %s\n", version, msg)
 		return nil, makeIgnore()
 	}
-	if opts.Version {
-		fmt.Fprintf(os.Stdout, "%s: %s\n", version, msg)
+	if opts.Help {
+		stdout.Write(opts.usage())
 		return nil, makeIgnore()
 	}
 
