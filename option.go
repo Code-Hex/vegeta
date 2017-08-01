@@ -34,10 +34,10 @@ func (opts *Options) parse(argv []string) ([]string, error) {
 
 func (opts Options) usage() []byte {
 	buf := bytes.Buffer{}
-	fmt.Fprintf(&buf, `%s
+	fmt.Fprintf(&buf, `%s: %s
 Usage: %s [options]
 Options:
-`, msg, name)
+`, version, msg, name)
 
 	t := reflect.TypeOf(opts)
 	for i := 0; i < t.NumField(); i++ {

@@ -50,12 +50,15 @@ func New() *Vegeta {
 
 // Run will serve
 func (v *Vegeta) Run() int {
+
 	if e := v.run(); e != nil {
 		exitCode, err := UnwrapErrors(e)
 		if v.StackTrace {
 			fmt.Fprintf(os.Stderr, "Error:\n  %+v\n", e)
 		} else {
-			fmt.Fprintf(os.Stderr, "Error:\n  %v\n", err)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error:\n  %v\n", err)
+			}
 		}
 		return exitCode
 	}
@@ -143,10 +146,12 @@ func parseOptions(opts *Options, argv []string) ([]string, error) {
 		return nil, exit.MakeDataErr(err)
 	}
 	if opts.Help {
-		return nil, exit.MakeUsage(errors.New(string(opts.usage())))
+		os.Stdout.Write(opts.usage())
+		return nil, makeIgnore()
 	}
 	if opts.Version {
-		return nil, exit.MakeUsage(errors.New(msg))
+		fmt.Fprintf(os.Stdout, "%s: %s\n", version, msg)
+		return nil, makeIgnore()
 	}
 
 	return o, nil
