@@ -84,7 +84,7 @@ func (v *Vegeta) prepare() error {
 		zap.AddStacktrace(zap.ErrorLevel),
 	)
 	if err != nil {
-		errors.Wrap(err, "Failed to construct zap")
+		return errors.Wrap(err, "Failed to construct zap")
 	}
 	v.Logger = logger
 	v.Handler = v.registerHandlers()

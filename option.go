@@ -52,7 +52,7 @@ Options:
 		fmt.Fprintf(&buf, "  %-21s %s\n", o, desc)
 
 		if deflt := tag.Get("default"); deflt != "" {
-			fmt.Fprintf(&buf, "  %-21s default: --%s='%s'\n", indent, tag.Get("long"), deflt)
+			fmt.Fprintf(&buf, "  %-21s   default: --%s='%s'\n", indent, tag.Get("long"), deflt)
 		}
 	}
 
