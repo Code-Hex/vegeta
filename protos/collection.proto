@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package protos;
+
+message RequestFromDevice {
+  string Timestamp = 1;
+  string Payload = 2;
+  string DeviceID = 3;
+  string IPAddress = 4;
+  bool is_success = 5;
+}
+
+message ResultResponse {
+  bool is_success = 1;
+}
+
+service Collection {
+  rpc RecvData(stream RequestFromDevice) returns (ResultResponse) {}
+}

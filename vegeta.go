@@ -12,8 +12,11 @@ import (
 	"syscall"
 	"time"
 
+	"google.golang.org/grpc"
+
 	"github.com/Code-Hex/exit"
 	"github.com/Code-Hex/vegeta/internal/utils"
+	"github.com/Code-Hex/vegeta/protos"
 	rotatelogs "github.com/lestrrat/go-file-rotatelogs"
 	"github.com/lestrrat/go-server-starter/listener"
 	"github.com/pkg/errors"
@@ -102,6 +105,9 @@ func (v *Vegeta) registerHandlers() *http.ServeMux {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("/"))
 	})
+	s := grpc.NewServer()
+	protos.RegisterCollectionServer(s, NewAPIServer())
+	mux.HandleFunc("/api", s.ServeHTTP)
 	return mux
 }
 
@@ -161,7 +167,10 @@ func parseOptions(opts *Options, argv []string) ([]string, error) {
 }
 
 func (v *Vegeta) listen() (net.Listener, error) {
-	var li net.Listener
+	var (
+		port string
+		li   net.Listener
+	)
 
 	if os.Getenv("SERVER_STARTER_PORT") != "" {
 		listeners, err := listener.ListenAll()
@@ -171,6 +180,7 @@ func (v *Vegeta) listen() (net.Listener, error) {
 		if 0 < len(listeners) {
 			li = listeners[0]
 		}
+		port = os.Getenv("SERVER_STARTER_PORT")
 	}
 
 	if li == nil {
@@ -179,7 +189,9 @@ func (v *Vegeta) listen() (net.Listener, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "listen error")
 		}
+		port = fmt.Sprintf("%d", v.Port)
 	}
+	fmt.Println("Start Server at", port)
 	return li, nil
 }
 
