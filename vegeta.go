@@ -12,12 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"google.golang.org/grpc"
-
 	"github.com/Code-Hex/exit"
 	"github.com/Code-Hex/vegeta/internal/utils"
-	"github.com/Code-Hex/vegeta/protos"
-	"github.com/julienschmidt/httprouter"
 	rotatelogs "github.com/lestrrat/go-file-rotatelogs"
 	"github.com/lestrrat/go-server-starter/listener"
 	"github.com/pkg/errors"
@@ -99,17 +95,6 @@ func (v *Vegeta) prepare() error {
 	v.Handler = v.registerHandlers()
 
 	return nil
-}
-
-func (v *Vegeta) registerHandlers() *httprouter.Router {
-	r := httprouter.New()
-	r.GET("/", func(w http.ResponseWriter, r *http.Request, pr httprouter.Params) {
-		w.Write([]byte("/"))
-	})
-	s := grpc.NewServer()
-	protos.RegisterCollectionServer(s, NewAPIServer())
-	r.HandlerFunc("POST", "/api", s.ServeHTTP)
-	return r
 }
 
 func setupLogger(opts ...zap.Option) (*zap.Logger, error) {
