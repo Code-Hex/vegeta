@@ -16,6 +16,7 @@ import (
 	"github.com/Code-Hex/vegeta/internal/utils"
 	rotatelogs "github.com/lestrrat/go-file-rotatelogs"
 	"github.com/lestrrat/go-server-starter/listener"
+	xslate "github.com/lestrrat/go-xslate"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -33,6 +34,7 @@ var stdout io.Writer = os.Stdout
 type Vegeta struct {
 	*http.Server
 	*zap.Logger
+	*xslate.Xslate
 	Options
 	waitSignal chan os.Signal
 }
@@ -83,6 +85,17 @@ func (v *Vegeta) prepare() error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to parse command line args")
 	}
+
+	xt, err := xslate.New(xslate.Args{
+		"Loader": xslate.Args{
+			"LoadPaths": []string{"./templates"},
+		},
+		"Parser": xslate.Args{"Syntax": "TTerse"},
+	})
+	if err != nil {
+		return errors.Wrap(err, "Failed to construct xslate")
+	}
+	v.Xslate = xt
 
 	logger, err := setupLogger(
 		zap.AddCaller(),

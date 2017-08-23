@@ -9,6 +9,7 @@ import (
 	"github.com/Code-Hex/vegeta/protos"
 	"github.com/gorilla/context"
 	"github.com/julienschmidt/httprouter"
+	xslate "github.com/lestrrat/go-xslate"
 	"github.com/stephens2424/muxchain"
 	"google.golang.org/grpc"
 )
@@ -29,7 +30,12 @@ func (v *Vegeta) registerHandlers() *httprouter.Router {
 
 func (v *Vegeta) Index(w http.ResponseWriter, r *http.Request) {
 	p := context.Get(r, "params").(httprouter.Params)
-	fmt.Fprintf(w, "This is test, I love %s!", p.ByName("arg"))
+	err := v.Xslate.RenderInto(w, "index.tt", xslate.Vars{"arg": p.ByName("arg")})
+	if err != nil {
+		v.Logger.Error("render error", zap.Error(err))
+		fmt.Fprint(w, "Error!!")
+		return
+	}
 }
 
 func (v *Vegeta) LoggingHandler(w http.ResponseWriter, r *http.Request) {
