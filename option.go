@@ -6,8 +6,8 @@ import (
 
 	"reflect"
 
+	"github.com/Code-Hex/exit"
 	flags "github.com/jessevdk/go-flags"
-	"github.com/pkg/errors"
 )
 
 const indent = "        "
@@ -25,7 +25,7 @@ func (opts *Options) parse(argv []string) ([]string, error) {
 	p := flags.NewParser(opts, flags.None)
 	args, err := p.ParseArgs(argv)
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid command line options")
+		return nil, exit.MakeDataErr(err)
 	}
 	return args, nil
 }

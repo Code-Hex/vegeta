@@ -151,7 +151,7 @@ func parseOptions(opts *Options, argv []string) ([]string, error) {
 	o, err := opts.parse(argv)
 	if err != nil {
 		stdout.Write(opts.usage())
-		return nil, exit.MakeDataErr(err)
+		return nil, errors.Wrap(err, "invalid command line options")
 	}
 	if opts.Version {
 		fmt.Fprintf(stdout, "%s: %s\n", version, msg)
