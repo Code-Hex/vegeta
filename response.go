@@ -1,6 +1,10 @@
 package vegeta
 
-import "net/http"
+import (
+	"bufio"
+	"net"
+	"net/http"
+)
 
 type Response struct {
 	vegeta    *Vegeta
@@ -42,4 +46,34 @@ func (r *Response) Write(b []byte) (n int, err error) {
 	n, err = r.Writer.Write(b)
 	r.Size += int64(n)
 	return
+}
+
+// Flush implements the http.Flusher interface to allow an HTTP handler to flush
+// buffered data to the client.
+// See [http.Flusher](https://golang.org/pkg/net/http/#Flusher)
+func (r *Response) Flush() {
+	r.Writer.(http.Flusher).Flush()
+}
+
+// Hijack implements the http.Hijacker interface to allow an HTTP handler to
+// take over the connection.
+// See [http.Hijacker](https://golang.org/pkg/net/http/#Hijacker)
+func (r *Response) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	return r.Writer.(http.Hijacker).Hijack()
+}
+
+// CloseNotify implements the http.CloseNotifier interface to allow detecting
+// when the underlying connection has gone away.
+// This mechanism can be used to cancel long operations on the server if the
+// client has disconnected before the response is ready.
+// See [http.CloseNotifier](https://golang.org/pkg/net/http/#CloseNotifier)
+func (r *Response) CloseNotify() <-chan bool {
+	return r.Writer.(http.CloseNotifier).CloseNotify()
+}
+
+func (r *Response) reset(w http.ResponseWriter) {
+	r.Writer = w
+	r.Size = 0
+	r.Status = http.StatusOK
+	r.Committed = false
 }
