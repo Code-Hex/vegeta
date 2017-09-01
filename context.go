@@ -4,13 +4,13 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/Code-Hex/vegeta/internal/header"
+	"github.com/Code-Hex/vegeta/internal/mime"
 )
 
 type (
-	// Context represents the context of the current HTTP request. It holds request and
-	// response objects, path, path parameters, data and registered handler.
-	Context interface{}
-	context struct {
+	ctx struct {
 		request  *http.Request
 		response *Response
 		path     string
@@ -21,56 +21,61 @@ type (
 		store    Map
 		vegeta   *Vegeta
 	}
+	// Ctx represents the context of the current HTTP request. It holds request and
+	// response objects, path, path parameters, data and registered handler.
+	Ctx interface {
+		Path() string
+	}
 )
 
 const (
 	defaultMemory = 32 << 20 // 32 MB
 )
 
-func (c *context) Path() string {
+func (c *ctx) Path() string {
 	return c.path
 }
 
-func (c *context) SetPath(p string) {
+func (c *ctx) SetPath(p string) {
 	c.path = p
 }
 
-func (c *context) Request() *http.Request {
+func (c *ctx) Request() *http.Request {
 	return c.request
 }
 
-func (c *context) SetRequest(r *http.Request) {
+func (c *ctx) SetRequest(r *http.Request) {
 	c.request = r
 }
 
-func (c *context) Response() *Response {
+func (c *ctx) Response() *Response {
 	return c.response
 }
 
-func (c *context) QueryParam(name string) string {
+func (c *ctx) QueryParam(name string) string {
 	if c.query == nil {
 		c.query = c.request.URL.Query()
 	}
 	return c.query.Get(name)
 }
 
-func (c *context) QueryParams() url.Values {
+func (c *ctx) QueryParams() url.Values {
 	if c.query == nil {
 		c.query = c.request.URL.Query()
 	}
 	return c.query
 }
 
-func (c *context) QueryString() string {
+func (c *ctx) QueryString() string {
 	return c.request.URL.RawQuery
 }
 
-func (c *context) FormValue(name string) string {
+func (c *ctx) FormValue(name string) string {
 	return c.request.FormValue(name)
 }
 
-func (c *context) FormParams() (url.Values, error) {
-	if strings.HasPrefix(c.request.Header.Get(HeaderContentType), MIMEMultipartForm) {
+func (c *ctx) FormParams() (url.Values, error) {
+	if strings.HasPrefix(c.request.Header.Get(header.ContentType), mime.MultipartForm) {
 		if err := c.request.ParseMultipartForm(defaultMemory); err != nil {
 			return nil, err
 		}
@@ -82,19 +87,19 @@ func (c *context) FormParams() (url.Values, error) {
 	return c.request.Form, nil
 }
 
-func (c *context) Cookie(name string) (*http.Cookie, error) {
+func (c *ctx) Cookie(name string) (*http.Cookie, error) {
 	return c.request.Cookie(name)
 }
 
-func (c *context) SetCookie(cookie *http.Cookie) {
+func (c *ctx) SetCookie(cookie *http.Cookie) {
 	http.SetCookie(c.Response(), cookie)
 }
 
-func (c *context) Cookies() []*http.Cookie {
+func (c *ctx) Cookies() []*http.Cookie {
 	return c.request.Cookies()
 }
 
-func (c *context) Get(key string) interface{} {
+func (c *ctx) Get(key string) interface{} {
 	v, ok := c.store.Load(key)
 	if !ok {
 		return nil
@@ -102,18 +107,18 @@ func (c *context) Get(key string) interface{} {
 	return v
 }
 
-func (c *context) Set(key string, val interface{}) {
+func (c *ctx) Set(key string, val interface{}) {
 	c.store.Store(key, val)
 }
 
-func (c *context) Vegeta() *Vegeta {
+func (c *ctx) Vegeta() *Vegeta {
 	return c.vegeta
 }
 
-func (c *context) Handler() HandlerFunc {
+func (c *ctx) Handler() HandlerFunc {
 	return c.handler
 }
 
-func (c *context) SetHandler(h HandlerFunc) {
+func (c *ctx) SetHandler(h HandlerFunc) {
 	c.handler = h
 }

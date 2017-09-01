@@ -165,7 +165,7 @@ func (v *Vegeta) prepare() error {
 		return errors.Wrap(err, "Failed to construct zap")
 	}
 	v.Logger = logger
-	v.Handler = v.registerHandlers()
+	v.setupHandler()
 
 	return nil
 }
