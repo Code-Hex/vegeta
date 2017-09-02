@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/Code-Hex/exit"
+	"github.com/Code-Hex/vegeta/internal/status"
+	"github.com/pkg/errors"
 )
 
 type causer interface {
@@ -36,6 +38,20 @@ func UnwrapErrors(err error) (int, error) {
 	}
 	return 0, nil
 }
+
+// Errors
+var (
+	ErrUnsupportedMediaType        = NewHTTPError(status.UnsupportedMediaType)
+	ErrNotFound                    = NewHTTPError(status.NotFound)
+	ErrUnauthorized                = NewHTTPError(status.Unauthorized)
+	ErrForbidden                   = NewHTTPError(status.Forbidden)
+	ErrMethodNotAllowed            = NewHTTPError(status.MethodNotAllowed)
+	ErrStatusRequestEntityTooLarge = NewHTTPError(status.RequestEntityTooLarge)
+	ErrValidatorNotRegistered      = errors.New("Validator not registered")
+	ErrRendererNotRegistered       = errors.New("Renderer not registered")
+	ErrInvalidRedirectCode         = errors.New("Invalid redirect status code")
+	ErrCookieNotFound              = errors.New("Cookie not found")
+)
 
 // HTTPError represents an error that occurred while handling a request.
 type HTTPError struct {

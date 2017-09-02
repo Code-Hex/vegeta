@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"net"
 	"net/http"
+
+	"github.com/Code-Hex/vegeta/internal/status"
 )
 
 type Response struct {
@@ -74,6 +76,6 @@ func (r *Response) CloseNotify() <-chan bool {
 func (r *Response) reset(w http.ResponseWriter) {
 	r.Writer = w
 	r.Size = 0
-	r.Status = http.StatusOK
+	r.Status = status.OK
 	r.Committed = false
 }
