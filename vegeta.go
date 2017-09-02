@@ -15,6 +15,7 @@ import (
 
 	"github.com/Code-Hex/exit"
 	"github.com/Code-Hex/vegeta/internal/utils"
+	"github.com/julienschmidt/httprouter"
 	rotatelogs "github.com/lestrrat/go-file-rotatelogs"
 	"github.com/lestrrat/go-server-starter/listener"
 	xslate "github.com/lestrrat/go-xslate"
@@ -31,23 +32,12 @@ const (
 
 var stdout io.Writer = os.Stdout
 
-// HTTP methods
-const (
-	DELETE  = "DELETE"
-	GET     = "GET"
-	HEAD    = "HEAD"
-	OPTIONS = "OPTIONS"
-	PATCH   = "PATCH"
-	POST    = "POST"
-	PUT     = "PUT"
-)
-
 type (
-	// MiddlewareFunc defines a function to process middleware.
-	MiddlewareFunc func(HandlerFunc) HandlerFunc
-
 	// HandlerFunc defines a function to server HTTP requests.
-	HandlerFunc func(Ctx) error
+	HandlerFunc func(*Context) error
+
+	// MiddlewareFunc defines a function to server HTTP requests.
+	MiddlewareFunc func(HandlerFunc) HandlerFunc
 
 	// Map is alias of *sync.Map
 	Map = *sync.Map
@@ -59,16 +49,18 @@ type (
 		*xslate.Xslate
 		Options
 		waitSignal chan os.Signal
-		maxParam   *int
+		Pool       sync.Pool
+		router     *httprouter.Router
+		middleware []MiddlewareFunc
 	}
 )
 
 var (
-	NotFoundHandler = func(c Ctx) error {
+	NotFoundHandler = func(c *Context) error {
 		return ErrNotFound
 	}
 
-	MethodNotAllowedHandler = func(c Ctx) error {
+	MethodNotAllowedHandler = func(c *Context) error {
 		return ErrMethodNotAllowed
 	}
 )
@@ -84,18 +76,7 @@ func New() *Vegeta {
 	return &Vegeta{
 		waitSignal: sigch,
 		Server:     new(http.Server),
-	}
-}
-
-// NewContext returns a Context instance.
-func (v *Vegeta) NewContext(r *http.Request, w http.ResponseWriter) Ctx {
-	return &ctx{
-		request:  r,
-		response: NewResponse(w, v),
-		store:    &sync.Map{},
-		vegeta:   v,
-		pvalues:  make([]string, *v.maxParam),
-		handler:  NotFoundHandler,
+		router:     httprouter.New(),
 	}
 }
 
@@ -151,6 +132,9 @@ func (v *Vegeta) prepare() error {
 		return errors.Wrap(err, "Failed to construct zap")
 	}
 	v.Logger = logger
+	v.Pool.New = func() interface{} {
+		return v.NewContext(nil, nil)
+	}
 	v.setupHandler()
 
 	return nil

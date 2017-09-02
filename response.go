@@ -9,7 +9,6 @@ import (
 )
 
 type Response struct {
-	vegeta    *Vegeta
 	Writer    http.ResponseWriter
 	Size      int64
 	Status    int
@@ -17,8 +16,8 @@ type Response struct {
 }
 
 // NewResponse creates a new instance of Response.
-func NewResponse(w http.ResponseWriter, v *Vegeta) (r *Response) {
-	return &Response{Writer: w, vegeta: v}
+func NewResponse(w http.ResponseWriter) (r *Response) {
+	return &Response{Writer: w}
 }
 
 // Header returns the header map for the writer that will be sent by
@@ -33,7 +32,6 @@ func (r *Response) Header() http.Header {
 
 func (r *Response) WriteHeader(code int) {
 	if r.Committed {
-		r.vegeta.Logger.Warn("response already committed")
 		return
 	}
 	r.Status = code

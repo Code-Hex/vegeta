@@ -6,8 +6,7 @@ import (
 	"github.com/Code-Hex/vegeta/protos"
 )
 
-type API struct {
-}
+type API struct{}
 
 func NewAPIServer() *API {
 	return &API{}
