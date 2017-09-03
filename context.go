@@ -14,9 +14,9 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-type Context struct {
-	*zap.Logger
-	*xslate.Xslate
+type ctx struct {
+	logger   *zap.Logger
+	xslate   *xslate.Xslate
 	request  *http.Request
 	response *Response
 	params   httprouter.Params
@@ -26,51 +26,82 @@ type Context struct {
 	store    Map
 }
 
+type Context interface {
+	Path() string
+	SetPath(string)
+
+	Request() *http.Request
+	SetRequest(*http.Request)
+	Response() *Response
+
+	QueryParam(string) string
+	QueryParams() url.Values
+	QueryString() string
+
+	Params() httprouter.Params
+	FormValue(string) string
+	FormParams() (url.Values, error)
+
+	Cookie(string) (*http.Cookie, error)
+	SetCookie(*http.Cookie)
+	Cookies() []*http.Cookie
+
+	Get(key string) interface{}
+	Set(key string, val interface{})
+
+	Logger() *zap.Logger
+	Render(w http.ResponseWriter, tmpl string, vars xslate.Vars) error
+}
+
 const defaultMemory = 32 << 20 // 32 MB
 
-func (c *Context) Path() string {
+func (c *ctx) Path() string {
 	return c.path
 }
 
-func (c *Context) SetPath(p string) {
+func (c *ctx) SetPath(p string) {
 	c.path = p
 }
 
-func (c *Context) Request() *http.Request {
+func (c *ctx) Request() *http.Request {
 	return c.request
 }
 
-func (c *Context) SetRequest(r *http.Request) {
+func (c *ctx) SetRequest(r *http.Request) {
 	c.request = r
 }
 
-func (c *Context) Response() *Response {
+func (c *ctx) Response() *Response {
 	return c.response
 }
 
-func (c *Context) QueryParam(name string) string {
+func (c *ctx) QueryParam(name string) string {
 	if c.query == nil {
 		c.query = c.request.URL.Query()
 	}
 	return c.query.Get(name)
 }
 
-func (c *Context) QueryParams() url.Values {
+func (c *ctx) QueryParams() url.Values {
 	if c.query == nil {
 		c.query = c.request.URL.Query()
 	}
 	return c.query
 }
 
-func (c *Context) QueryString() string {
+func (c *ctx) QueryString() string {
 	return c.request.URL.RawQuery
 }
 
-func (c *Context) FormValue(name string) string {
+func (c *ctx) Params() httprouter.Params {
+	return c.params
+}
+
+func (c *ctx) FormValue(name string) string {
 	return c.request.FormValue(name)
 }
 
-func (c *Context) FormParams() (url.Values, error) {
+func (c *ctx) FormParams() (url.Values, error) {
 	if strings.HasPrefix(c.request.Header.Get(header.ContentType), mime.MultipartForm) {
 		if err := c.request.ParseMultipartForm(defaultMemory); err != nil {
 			return nil, err
@@ -83,19 +114,19 @@ func (c *Context) FormParams() (url.Values, error) {
 	return c.request.Form, nil
 }
 
-func (c *Context) Cookie(name string) (*http.Cookie, error) {
+func (c *ctx) Cookie(name string) (*http.Cookie, error) {
 	return c.request.Cookie(name)
 }
 
-func (c *Context) SetCookie(cookie *http.Cookie) {
+func (c *ctx) SetCookie(cookie *http.Cookie) {
 	http.SetCookie(c.response, cookie)
 }
 
-func (c *Context) Cookies() []*http.Cookie {
+func (c *ctx) Cookies() []*http.Cookie {
 	return c.request.Cookies()
 }
 
-func (c *Context) Get(key string) interface{} {
+func (c *ctx) Get(key string) interface{} {
 	v, ok := c.store.Load(key)
 	if !ok {
 		return nil
@@ -103,24 +134,32 @@ func (c *Context) Get(key string) interface{} {
 	return v
 }
 
-func (c *Context) Set(key string, val interface{}) {
+func (c *ctx) Set(key string, val interface{}) {
 	c.store.Store(key, val)
 }
 
+func (c *ctx) Logger() *zap.Logger {
+	return c.logger
+}
+
+func (c *ctx) Render(w http.ResponseWriter, tmpl string, vars xslate.Vars) error {
+	return c.xslate.RenderInto(w, tmpl, vars)
+}
+
 // NewContext returns a Context instance.
-func (v *Vegeta) NewContext(r *http.Request, w http.ResponseWriter) *Context {
-	return &Context{
+func (v *Vegeta) NewContext(r *http.Request, w http.ResponseWriter) Context {
+	return &ctx{
 		request:  r,
 		response: NewResponse(w),
-		Logger:   v.Logger,
-		Xslate:   v.Xslate,
+		logger:   v.Logger,
+		xslate:   v.Xslate,
 		store:    &sync.Map{},
 		handler:  NotFoundHandler,
 	}
 }
 
-func (v *Vegeta) CreateContext(w http.ResponseWriter, r *http.Request, params httprouter.Params) *Context {
-	ctx := v.Pool.Get().(*Context)
+func (v *Vegeta) CreateContext(w http.ResponseWriter, r *http.Request, params httprouter.Params) Context {
+	ctx := v.Pool.Get().(*ctx)
 	ctx.request = r
 	ctx.response.reset(w)
 	ctx.path = r.RequestURI
@@ -128,6 +167,6 @@ func (v *Vegeta) CreateContext(w http.ResponseWriter, r *http.Request, params ht
 	return ctx
 }
 
-func (v *Vegeta) ReUseContext(ctx *Context) {
-	v.Pool.Put(ctx)
+func (v *Vegeta) ReUseContext(c Context) {
+	v.Pool.Put(c)
 }

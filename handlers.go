@@ -1,15 +1,19 @@
 package vegeta
 
 import (
-	"fmt"
 	"net/http"
-
-	"go.uber.org/zap"
 
 	"github.com/Code-Hex/vegeta/protos"
 	"github.com/julienschmidt/httprouter"
-	xslate "github.com/lestrrat/go-xslate"
 	"google.golang.org/grpc"
+)
+
+type (
+	// HandlerFunc defines a function to server HTTP requests.
+	HandlerFunc func(Context) error
+
+	// MiddlewareFunc defines a function to server HTTP requests.
+	MiddlewareFunc func(HandlerFunc) HandlerFunc
 )
 
 // HTTP methods
@@ -23,15 +27,28 @@ const (
 	PUT     = "PUT"
 )
 
+var (
+	NotFoundHandler = func(c Context) error {
+		return ErrNotFound
+	}
+
+	MethodNotAllowedHandler = func(c Context) error {
+		return ErrMethodNotAllowed
+	}
+)
+
 func (v *Vegeta) setupHandler() {
-	v.UseMiddleWare(AccessLog, Recover)
+	v.UseMiddleWare(
+		AccessLog,
+		Recover,
+	)
 	v.route()
 	v.Handler = v.router
 }
 
 func (v *Vegeta) route() {
-	v.GET("/test/:arg", v.Index)
-	v.GET("/panic", v.Panic)
+	v.GET("/test/:arg", Index)
+	v.GET("/panic", Panic)
 	s := grpc.NewServer()
 	protos.RegisterCollectionServer(s, NewAPIServer())
 	//r.POST("/api", s.ServeHTTP)
@@ -80,21 +97,4 @@ func (v *Vegeta) Handle(method, path string, handler HandlerFunc) {
 		}
 		h(ctx)
 	})
-}
-
-func (v *Vegeta) Index(c *Context) error {
-	w := c.response.Writer
-	p := c.params
-	err := v.Xslate.RenderInto(w, "index.tt", xslate.Vars{"arg": p.ByName("arg")})
-	if err != nil {
-		v.Logger.Error("render error", zap.Error(err))
-		fmt.Fprint(w, "Error!!")
-		return err
-	}
-	return nil
-}
-
-func (v *Vegeta) Panic(c *Context) error {
-	panic("KOREHA PANIC DESUYO!!")
-	return nil
 }

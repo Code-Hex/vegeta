@@ -7,9 +7,9 @@ import (
 )
 
 func AccessLog(next HandlerFunc) HandlerFunc {
-	return func(c *Context) error {
+	return func(c Context) error {
 		r := c.Request()
-		c.Info("Accessed",
+		c.Logger().Info("Accessed",
 			zap.String("URI", r.RequestURI),
 			zap.String("From", r.RemoteAddr),
 		)
@@ -18,7 +18,7 @@ func AccessLog(next HandlerFunc) HandlerFunc {
 }
 
 func Recover(next HandlerFunc) HandlerFunc {
-	return func(c *Context) error {
+	return func(c Context) error {
 		defer func() {
 			if r := recover(); r != nil {
 				var err error
@@ -28,7 +28,7 @@ func Recover(next HandlerFunc) HandlerFunc {
 				default:
 					err = fmt.Errorf("%v", r)
 				}
-				c.Panic(err.Error())
+				c.Logger().Panic(err.Error())
 			}
 		}()
 		return next(c)

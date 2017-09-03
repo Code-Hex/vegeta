@@ -33,12 +33,6 @@ const (
 var stdout io.Writer = os.Stdout
 
 type (
-	// HandlerFunc defines a function to server HTTP requests.
-	HandlerFunc func(*Context) error
-
-	// MiddlewareFunc defines a function to server HTTP requests.
-	MiddlewareFunc func(HandlerFunc) HandlerFunc
-
 	// Map is alias of *sync.Map
 	Map = *sync.Map
 
@@ -52,16 +46,6 @@ type (
 		Pool       sync.Pool
 		router     *httprouter.Router
 		middleware []MiddlewareFunc
-	}
-)
-
-var (
-	NotFoundHandler = func(c *Context) error {
-		return ErrNotFound
-	}
-
-	MethodNotAllowedHandler = func(c *Context) error {
-		return ErrMethodNotAllowed
 	}
 )
 
