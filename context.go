@@ -11,6 +11,7 @@ import (
 
 	"github.com/Code-Hex/vegeta/internal/header"
 	"github.com/Code-Hex/vegeta/internal/mime"
+	"github.com/Code-Hex/vegeta/internal/status"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -46,11 +47,13 @@ type Context interface {
 	SetCookie(*http.Cookie)
 	Cookies() []*http.Cookie
 
+	Error(error)
+
 	Get(key string) interface{}
 	Set(key string, val interface{})
 
 	Logger() *zap.Logger
-	Render(w http.ResponseWriter, tmpl string, vars xslate.Vars) error
+	Render(tmpl string, vars xslate.Vars) error
 }
 
 const defaultMemory = 32 << 20 // 32 MB
@@ -138,12 +141,26 @@ func (c *ctx) Set(key string, val interface{}) {
 	c.store.Store(key, val)
 }
 
+func (c *ctx) Error(err error) {
+	var (
+		code    = status.InternalServerError
+		message = http.StatusText(code)
+	)
+	if he, ok := err.(*HTTPError); ok {
+		code = he.Code
+		message = he.Message.(string)
+	} else {
+		c.Logger().Error("Error", zap.Error(err))
+	}
+	c.Render("error.tt", xslate.Vars{"code": code, "message": message})
+}
+
 func (c *ctx) Logger() *zap.Logger {
 	return c.logger
 }
 
-func (c *ctx) Render(w http.ResponseWriter, tmpl string, vars xslate.Vars) error {
-	return c.xslate.RenderInto(w, tmpl, vars)
+func (c *ctx) Render(tmpl string, vars xslate.Vars) error {
+	return c.xslate.RenderInto(c.Response(), tmpl, vars)
 }
 
 // NewContext returns a Context instance.

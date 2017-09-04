@@ -28,7 +28,7 @@ func Recover(next HandlerFunc) HandlerFunc {
 				default:
 					err = fmt.Errorf("%v", r)
 				}
-				c.Logger().Panic(err.Error())
+				c.Error(err)
 			}
 		}()
 		return next(c)

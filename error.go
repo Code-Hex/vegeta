@@ -47,6 +47,7 @@ var (
 	ErrForbidden                   = NewHTTPError(status.Forbidden)
 	ErrMethodNotAllowed            = NewHTTPError(status.MethodNotAllowed)
 	ErrStatusRequestEntityTooLarge = NewHTTPError(status.RequestEntityTooLarge)
+	ErrInternalServer              = NewHTTPError(status.InternalServerError)
 	ErrValidatorNotRegistered      = errors.New("Validator not registered")
 	ErrRendererNotRegistered       = errors.New("Renderer not registered")
 	ErrInvalidRedirectCode         = errors.New("Invalid redirect status code")
