@@ -164,19 +164,19 @@ func (c *ctx) Render(tmpl string, vars xslate.Vars) error {
 }
 
 // NewContext returns a Context instance.
-func (v *Vegeta) NewContext(r *http.Request, w http.ResponseWriter) Context {
+func (e *Engine) NewContext(r *http.Request, w http.ResponseWriter) Context {
 	return &ctx{
 		request:  r,
 		response: NewResponse(w),
-		logger:   v.Logger,
-		xslate:   v.Xslate,
+		logger:   e.Logger,
+		xslate:   e.Xslate,
 		store:    &sync.Map{},
 		handler:  NotFoundHandler,
 	}
 }
 
-func (v *Vegeta) CreateContext(w http.ResponseWriter, r *http.Request, params httprouter.Params) Context {
-	ctx := v.Pool.Get().(*ctx)
+func (e *Engine) CreateContext(w http.ResponseWriter, r *http.Request, params httprouter.Params) Context {
+	ctx := e.Pool.Get().(*ctx)
 	ctx.request = r
 	ctx.response.reset(w)
 	ctx.path = r.RequestURI
@@ -184,6 +184,6 @@ func (v *Vegeta) CreateContext(w http.ResponseWriter, r *http.Request, params ht
 	return ctx
 }
 
-func (v *Vegeta) ReUseContext(c Context) {
-	v.Pool.Put(c)
+func (e *Engine) ReUseContext(c Context) {
+	e.Pool.Put(c)
 }

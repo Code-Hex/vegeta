@@ -37,63 +37,63 @@ var (
 	}
 )
 
-func (v *Vegeta) setupHandler() {
-	v.UseMiddleWare(
+func (e *Engine) setupHandler() {
+	e.UseMiddleWare(
 		AccessLog,
 		Recover,
 	)
-	v.route()
-	v.Handler = v.router
+	e.route()
+	e.Server.Handler = e.Router
 }
 
-func (v *Vegeta) route() {
-	v.GET("/test/:arg", Index)
-	v.GET("/panic", Panic)
+func (e *Engine) route() {
+	e.GET("/test/:arg", Index)
+	e.GET("/panic", Panic)
 	s := grpc.NewServer()
 	protos.RegisterCollectionServer(s, NewAPIServer())
 	//r.POST("/api", s.ServeHTTP)
 }
 
-func (v *Vegeta) UseMiddleWare(middleware ...MiddlewareFunc) {
-	v.middleware = append(v.middleware, middleware...)
+func (e *Engine) UseMiddleWare(middleware ...MiddlewareFunc) {
+	e.middleware = append(e.middleware, middleware...)
 }
 
-func (v *Vegeta) DELETE(path string, f HandlerFunc) {
-	v.Handle(DELETE, path, f)
+func (e *Engine) DELETE(path string, f HandlerFunc) {
+	e.Handle(DELETE, path, f)
 }
 
-func (v *Vegeta) GET(path string, f HandlerFunc) {
-	v.Handle(GET, path, f)
+func (e *Engine) GET(path string, f HandlerFunc) {
+	e.Handle(GET, path, f)
 }
 
-func (v *Vegeta) HEAD(path string, f HandlerFunc) {
-	v.Handle(HEAD, path, f)
+func (e *Engine) HEAD(path string, f HandlerFunc) {
+	e.Handle(HEAD, path, f)
 }
 
-func (v *Vegeta) OPTIONS(path string, f HandlerFunc) {
-	v.Handle(OPTIONS, path, f)
+func (e *Engine) OPTIONS(path string, f HandlerFunc) {
+	e.Handle(OPTIONS, path, f)
 }
 
-func (v *Vegeta) PATCH(path string, f HandlerFunc) {
-	v.Handle(PATCH, path, f)
+func (e *Engine) PATCH(path string, f HandlerFunc) {
+	e.Handle(PATCH, path, f)
 }
 
-func (v *Vegeta) POST(path string, f HandlerFunc) {
-	v.Handle(POST, path, f)
+func (e *Engine) POST(path string, f HandlerFunc) {
+	e.Handle(POST, path, f)
 }
 
-func (v *Vegeta) PUT(path string, f HandlerFunc) {
-	v.Handle(PUT, path, f)
+func (e *Engine) PUT(path string, f HandlerFunc) {
+	e.Handle(PUT, path, f)
 }
 
-func (v *Vegeta) Handle(method, path string, handler HandlerFunc) {
-	v.router.Handle(method, path, func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-		ctx := v.CreateContext(w, r, p)
-		defer v.ReUseContext(ctx)
+func (e *Engine) Handle(method, path string, handler HandlerFunc) {
+	e.Router.Handle(method, path, func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+		ctx := e.CreateContext(w, r, p)
+		defer e.ReUseContext(ctx)
 		h := handler
 		// Chain middleware
-		for i := len(v.middleware) - 1; i >= 0; i-- {
-			h = v.middleware[i](h)
+		for i := len(e.middleware) - 1; i >= 0; i-- {
+			h = e.middleware[i](h)
 		}
 		h(ctx)
 	})

@@ -1,4 +1,4 @@
-package vegeta
+package main
 
 import (
 	"bytes"

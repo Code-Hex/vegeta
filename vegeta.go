@@ -3,183 +3,51 @@ package vegeta
 import (
 	"context"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
-	"path/filepath"
 	"sync"
-	"syscall"
-	"time"
 
-	"github.com/Code-Hex/exit"
-	"github.com/Code-Hex/vegeta/internal/utils"
 	"github.com/julienschmidt/httprouter"
-	rotatelogs "github.com/lestrrat/go-file-rotatelogs"
 	"github.com/lestrrat/go-server-starter/listener"
 	xslate "github.com/lestrrat/go-xslate"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
-
-const (
-	version = "0.0.1"
-	name    = "vegeta"
-	msg     = name + " project to collect large amounts of vegetable data using IoT"
-)
-
-var stdout io.Writer = os.Stdout
 
 type (
 	// Map is alias of *sync.Map
 	Map = *sync.Map
 
-	// Vegeta is context for this application
-	Vegeta struct {
-		*http.Server
+	// Engine is context for this application
+	Engine struct {
 		*zap.Logger
 		*xslate.Xslate
-		Options
-		waitSignal chan os.Signal
+		Port       int
 		Pool       sync.Pool
-		router     *httprouter.Router
+		Server     *http.Server
+		Router     *httprouter.Router
 		middleware []MiddlewareFunc
 	}
 )
 
 // New return the context for vegeta application
-func New() *Vegeta {
-	sigch := make(chan os.Signal)
-	signal.Notify(
-		sigch,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-	)
-	return &Vegeta{
-		waitSignal: sigch,
-		Server:     new(http.Server),
-		router:     httprouter.New(),
+func New() *Engine {
+	return &Engine{
+		Port:   3000,
+		Router: httprouter.New(),
+		Server: new(http.Server),
 	}
 }
 
-// Run will serve
-func (v *Vegeta) Run() int {
-	if e := v.run(); e != nil {
-		exitCode, err := UnwrapErrors(e)
-		if v.StackTrace {
-			fmt.Fprintf(os.Stderr, "Error:\n  %+v\n", e)
-		} else {
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error:\n  %v\n", err)
-			}
-		}
-		return exitCode
-	}
-	return 0
-}
-
-func (v *Vegeta) run() error {
-	if err := v.prepare(); err != nil {
+func (e *Engine) Start(ctx context.Context) error {
+	if err := e.setup(); err != nil {
 		return err
 	}
-	li, err := v.listen()
-	if err != nil {
-		return err
-	}
-	return v.serve(li)
+	return e.Serve(ctx)
 }
 
-func (v *Vegeta) prepare() error {
-	_, err := parseOptions(&v.Options, os.Args[1:])
-	if err != nil {
-		return errors.Wrap(err, "Failed to parse command line args")
-	}
-
-	xt, err := xslate.New(xslate.Args{
-		"Loader": xslate.Args{
-			"LoadPaths": []string{"./templates"},
-		},
-		"Parser": xslate.Args{"Syntax": "TTerse"},
-	})
-	if err != nil {
-		return errors.Wrap(err, "Failed to construct xslate")
-	}
-	v.Xslate = xt
-
-	logger, err := setupLogger(
-		zap.AddCaller(),
-		zap.AddStacktrace(zap.ErrorLevel),
-	)
-	if err != nil {
-		return errors.Wrap(err, "Failed to construct zap")
-	}
-	v.Logger = logger
-	v.Pool.New = func() interface{} {
-		return v.NewContext(nil, nil)
-	}
-	v.setupHandler()
-
-	return nil
-}
-
-func setupLogger(opts ...zap.Option) (*zap.Logger, error) {
-	config := genLoggerConfig()
-	enc := zapcore.NewJSONEncoder(config.EncoderConfig)
-
-	dir := "log"
-	ok, err := utils.Exists(dir)
-	if err != nil {
-		return nil, exit.MakeUnAvailable(err)
-	}
-	if !ok {
-		os.Mkdir(dir, os.ModeDir|os.ModePerm)
-	}
-	absPath, err := filepath.Abs(dir)
-	if err != nil {
-		return nil, exit.MakeUnAvailable(err)
-	}
-	logf, err := rotatelogs.New(
-		filepath.Join(absPath, "vegeta_log.%Y%m%d%H%M"),
-		rotatelogs.WithLinkName(filepath.Join(absPath, "vegeta_log")),
-		rotatelogs.WithMaxAge(24*time.Hour),
-		rotatelogs.WithRotationTime(time.Hour),
-	)
-	if err != nil {
-		return nil, exit.MakeUnAvailable(err)
-	}
-	core := zapcore.NewCore(enc, zapcore.AddSync(logf), config.Level)
-
-	return zap.New(core, opts...), nil
-}
-
-func genLoggerConfig() zap.Config {
-	if isProduction() {
-		return zap.NewProductionConfig()
-	}
-	return zap.NewDevelopmentConfig()
-}
-
-func parseOptions(opts *Options, argv []string) ([]string, error) {
-	o, err := opts.parse(argv)
-	if err != nil {
-		stdout.Write(opts.usage())
-		return nil, errors.Wrap(err, "invalid command line options")
-	}
-	if opts.Version {
-		fmt.Fprintf(stdout, "%s: %s\n", version, msg)
-		return nil, makeIgnore()
-	}
-	if opts.Help {
-		stdout.Write(opts.usage())
-		return nil, makeIgnore()
-	}
-
-	return o, nil
-}
-
-func (v *Vegeta) listen() (net.Listener, error) {
+func (v *Engine) listen() (net.Listener, error) {
 	var (
 		port string
 		li   net.Listener
@@ -208,18 +76,16 @@ func (v *Vegeta) listen() (net.Listener, error) {
 	return li, nil
 }
 
-func (v *Vegeta) serve(li net.Listener) error {
-	go func() {
-		if err := v.Serve(li); err != nil {
-			v.Warn("Server is stopped", zap.Error(err))
-		}
-	}()
-	return v.shutdown()
+func (e *Engine) Serve(ctx context.Context) error {
+	li, err := e.listen()
+	if err != nil {
+		return err
+	}
+	return e.Server.Serve(li)
 }
 
-func (v *Vegeta) shutdown() error {
-	<-v.waitSignal
-	return v.Shutdown(context.Background())
+func (e *Engine) Shutdown(ctx context.Context) error {
+	return e.Server.Shutdown(ctx)
 }
 
 func isProduction() bool {
