@@ -1,13 +1,14 @@
-package vegeta
+package middleware
 
 import (
 	"fmt"
 
+	"github.com/Code-Hex/vegeta"
 	"go.uber.org/zap"
 )
 
-func AccessLog(next HandlerFunc) HandlerFunc {
-	return func(c Context) error {
+func AccessLog(next vegeta.HandlerFunc) vegeta.HandlerFunc {
+	return func(c vegeta.Context) error {
 		r := c.Request()
 		c.Logger().Info("Accessed",
 			zap.String("URI", r.RequestURI),
@@ -17,8 +18,8 @@ func AccessLog(next HandlerFunc) HandlerFunc {
 	}
 }
 
-func Recover(next HandlerFunc) HandlerFunc {
-	return func(c Context) error {
+func Recover(next vegeta.HandlerFunc) vegeta.HandlerFunc {
+	return func(c vegeta.Context) error {
 		defer func() {
 			if r := recover(); r != nil {
 				var err error

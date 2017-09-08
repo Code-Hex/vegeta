@@ -20,6 +20,7 @@ const (
 )
 
 func (e *Engine) setup() error {
+	e.Server.Handler = e.Router
 	e.Pool.New = func() interface{} {
 		return e.NewContext(nil, nil)
 	}
@@ -34,8 +35,6 @@ func (e *Engine) setup() error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to setup logger")
 	}
-
-	e.setupHandler()
 
 	return nil
 }

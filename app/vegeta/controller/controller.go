@@ -1,13 +1,13 @@
-package vegeta
+package controller
 
 import (
-	xslate "github.com/lestrrat/go-xslate"
+	"github.com/Code-Hex/vegeta"
 	"go.uber.org/zap"
 )
 
-func Index(c Context) error {
+func Index(c vegeta.Context) error {
 	p := c.Params()
-	err := c.Render("index.tt", xslate.Vars{"arg": p.ByName("arg")})
+	err := c.Render("index.tt", vegeta.Vars{"arg": p.ByName("arg")})
 	if err != nil {
 		c.Logger().Error("render error", zap.Error(err))
 		return err
@@ -15,7 +15,7 @@ func Index(c Context) error {
 	return nil
 }
 
-func Panic(c Context) error {
+func Panic(c vegeta.Context) error {
 	panic("KOREHA PANIC DESUYO!!")
 	return nil
 }

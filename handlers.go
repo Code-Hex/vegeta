@@ -3,9 +3,7 @@ package vegeta
 import (
 	"net/http"
 
-	"github.com/Code-Hex/vegeta/protos"
 	"github.com/julienschmidt/httprouter"
-	"google.golang.org/grpc"
 )
 
 type (
@@ -36,23 +34,6 @@ var (
 		return ErrMethodNotAllowed
 	}
 )
-
-func (e *Engine) setupHandler() {
-	e.UseMiddleWare(
-		AccessLog,
-		Recover,
-	)
-	e.route()
-	e.Server.Handler = e.Router
-}
-
-func (e *Engine) route() {
-	e.GET("/test/:arg", Index)
-	e.GET("/panic", Panic)
-	s := grpc.NewServer()
-	protos.RegisterCollectionServer(s, NewAPIServer())
-	//r.POST("/api", s.ServeHTTP)
-}
 
 func (e *Engine) UseMiddleWare(middleware ...MiddlewareFunc) {
 	e.middleware = append(e.middleware, middleware...)

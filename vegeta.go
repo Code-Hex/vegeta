@@ -19,6 +19,9 @@ type (
 	// Map is alias of *sync.Map
 	Map = *sync.Map
 
+	// Vars is alias of xslate.Vars
+	Vars = xslate.Vars
+
 	// Engine is context for this application
 	Engine struct {
 		*zap.Logger

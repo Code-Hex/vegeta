@@ -9,8 +9,12 @@ import (
 	"syscall"
 
 	"github.com/Code-Hex/vegeta"
+	"github.com/Code-Hex/vegeta/app/vegeta/controller"
+	"github.com/Code-Hex/vegeta/middleware"
+	"github.com/Code-Hex/vegeta/protos"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -56,6 +60,13 @@ func (v *Vegeta) Run() int {
 }
 
 func (v *Vegeta) run() error {
+	if err := v.prepare(); err != nil {
+		return errors.Wrap(err, "Failed to prepare")
+	}
+	return v.serve()
+}
+
+func (v *Vegeta) serve() error {
 	ctx := context.Background()
 	go func() {
 		err := v.Engine.Start(ctx)
@@ -77,6 +88,19 @@ func (v *Vegeta) prepare() error {
 		return errors.Wrap(err, "Failed to parse command line args")
 	}
 	v.Engine.Port = v.Options.Port
+	return v.setupHandlers()
+}
+
+func (v *Vegeta) setupHandlers() error {
+	v.Engine.UseMiddleWare(
+		middleware.AccessLog,
+		middleware.Recover,
+	)
+	v.Engine.GET("/test/:arg", controller.Index)
+	v.Engine.GET("/panic", controller.Panic)
+	s := grpc.NewServer()
+	protos.RegisterCollectionServer(s, NewAPIServer())
+	//r.POST("/api", s.ServeHTTP)
 	return nil
 }
 
