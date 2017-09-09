@@ -12,7 +12,7 @@ import (
 func TestNewHTTPError(t *testing.T) {
 	type args struct {
 		code    int
-		message []interface{}
+		message []string
 	}
 	tests := []struct {
 		name string
@@ -43,7 +43,7 @@ func TestNewHTTPError(t *testing.T) {
 			name: "Status is 500 but message is changed",
 			args: args{
 				code:    status.InternalServerError,
-				message: []interface{}{"Too Bad..."},
+				message: []string{"Too Bad..."},
 			},
 			want: &HTTPError{
 				Code:    status.InternalServerError,
@@ -64,7 +64,7 @@ func TestNewHTTPError(t *testing.T) {
 func TestHTTPError_Error(t *testing.T) {
 	type fields struct {
 		Code    int
-		Message interface{}
+		Message string
 	}
 	tests := []struct {
 		name   string
@@ -87,7 +87,7 @@ func TestHTTPError_Error(t *testing.T) {
 			name: "Status is 500 message but message is changed",
 			fields: fields{
 				Code:    status.NotFound,
-				Message: []interface{}{"Too Bad..."}[0],
+				Message: []string{"Too Bad..."}[0],
 			},
 			want: fmt.Sprintf(
 				"code=%d, message=%v",

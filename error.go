@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/Code-Hex/vegeta/internal/status"
-	xslate "github.com/lestrrat/go-xslate"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -28,11 +27,11 @@ var (
 // HTTPError represents an error that occurred while handling a request.
 type HTTPError struct {
 	Code    int
-	Message interface{}
+	Message string
 }
 
 // NewHTTPError creates a new HTTPError instance.
-func NewHTTPError(code int, message ...interface{}) *HTTPError {
+func NewHTTPError(code int, message ...string) *HTTPError {
 	he := &HTTPError{Code: code, Message: http.StatusText(code)}
 	if len(message) > 0 {
 		he.Message = message[0]
@@ -47,8 +46,8 @@ func (he *HTTPError) Error() string {
 
 func (e *Engine) DefaultHTTPErrorHandler(err error, c Context) {
 	var (
-		code = http.StatusInternalServerError
-		msg  interface{}
+		code = status.InternalServerError
+		msg  string
 	)
 
 	if he, ok := err.(*HTTPError); ok {
@@ -65,7 +64,7 @@ func (e *Engine) DefaultHTTPErrorHandler(err error, c Context) {
 		if c.Request().Method == HEAD { // Issue #608
 			err = c.NoContent(code)
 		} else {
-			err = c.Render("error.tt", xslate.Vars{"code": code, "message": msg})
+			err = c.String(code, msg)
 		}
 		if err != nil {
 			e.Logger.Error("Send response error", zap.Error(err))
