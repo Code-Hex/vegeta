@@ -61,6 +61,9 @@ type Context interface {
 
 	Logger() *zap.Logger
 	Render(tmpl string, vars xslate.Vars) error
+
+	Blob(code int, contentType string, b []byte) error
+	String(code int, content string) error
 }
 
 const defaultMemory = 32 << 20 // 32 MB
@@ -180,6 +183,17 @@ func (c *ctx) Logger() *zap.Logger {
 
 func (c *ctx) Render(tmpl string, vars xslate.Vars) error {
 	return c.xslate.RenderInto(c.Response(), tmpl, vars)
+}
+
+func (c *ctx) Blob(code int, contentType string, b []byte) (err error) {
+	c.response.Header().Set(header.ContentType, contentType)
+	c.response.WriteHeader(code)
+	_, err = c.response.Write(b)
+	return
+}
+
+func (c *ctx) String(code int, s string) (err error) {
+	return c.Blob(code, mime.TextPlainCharsetUTF8, []byte(s))
 }
 
 // NewContext returns a Context instance.
