@@ -1,7 +1,6 @@
 package vegeta
 
 import (
-	"io/ioutil"
 	"net/http/httptest"
 	"reflect"
 	"testing"
@@ -35,8 +34,6 @@ func TestRouter(t *testing.T) {
 	e.ServeHTTP(rec, req)
 
 	if !routed {
-		resp := rec.Result()
-		body, _ := ioutil.ReadAll(resp.Body)
-		t.Errorf("routing is failed: %s", body)
+		t.Errorf("routing is failed: %s", rec.Body.String())
 	}
 }
