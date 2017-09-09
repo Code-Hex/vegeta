@@ -12,10 +12,7 @@ import (
 )
 
 func TestMiddleware(t *testing.T) {
-	e := New()
-	if err := e.setup(); err != nil {
-		t.Errorf("setup is failed: %s", err.Error())
-	}
+	e := InitEngine(t)
 	buf := new(bytes.Buffer)
 	e.UseMiddleWare(
 		func(next HandlerFunc) HandlerFunc {
@@ -50,10 +47,7 @@ func TestMiddleware(t *testing.T) {
 }
 
 func TestEchoMiddlewareError(t *testing.T) {
-	e := New()
-	if err := e.setup(); err != nil {
-		t.Errorf("setup is failed: %s", err.Error())
-	}
+	e := InitEngine(t)
 	e.UseMiddleWare(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			return errors.New("error")
@@ -61,13 +55,106 @@ func TestEchoMiddlewareError(t *testing.T) {
 	})
 	e.GET("/", NotFoundHandler)
 	c, _ := request(GET, "/", e)
-	if status.InternalServerError != c {
-		t.Errorf(
-			"Status code is not equal, expected: %d, actual: %d",
-			status.InternalServerError,
-			c,
-		)
+	assert.Equal(t, status.InternalServerError, c)
+}
+
+func TestRouterParam(t *testing.T) {
+	e := InitEngine(t)
+	e.Handle(GET, "/users/:id", func(c Context) error {
+		return nil
+	})
+	c := e.NewContext(nil, nil).(*ctx)
+	e.Find(GET, "/users/1", c)
+	assert.Equal(t, "1", c.Params().ByName("id"))
+}
+
+func TestRouterTwoParam(t *testing.T) {
+	e := InitEngine(t)
+	e.Handle(GET, "/users/:uid/files/:fid", func(Context) error {
+		return nil
+	})
+	c := e.NewContext(nil, nil).(*ctx)
+	e.Find(GET, "/users/1/files/1", c)
+	params := c.Params()
+	assert.Equal(t, "1", params.ByName("uid"))
+	assert.Equal(t, "1", params.ByName("fid"))
+}
+
+func TestRouterMatchAny(t *testing.T) {
+	e := InitEngine(t)
+
+	// Routes
+	e.Handle(GET, "/users/*name", func(Context) error {
+		return nil
+	})
+	c := e.NewContext(nil, nil).(*ctx)
+	e.Find(GET, "/users/joe", c)
+	assert.Equal(t, "/joe", c.Params().ByName("name"))
+}
+
+func TestGET(t *testing.T) {
+	e := InitEngine(t)
+	e.GET("/", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	code, body := request(GET, "/", e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+}
+
+func TestGETWithParams(t *testing.T) {
+	e := InitEngine(t)
+	var param string
+	e.GET("/:name", func(c Context) error {
+		param = c.Params().ByName("name")
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	code, body := request(GET, "/"+expected, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+}
+
+func TestGETWithQueryParam(t *testing.T) {
+	e := InitEngine(t)
+
+	var param string
+	e.GET("/", func(c Context) error {
+		param = c.QueryParam("foo")
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	code, body := request(GET, "/?foo="+expected, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+}
+
+func TestGETWithParameters(t *testing.T) {
+	e := InitEngine(t)
+
+	var param, qparam string
+	e.GET("/:name", func(c Context) error {
+		param = c.Params().ByName("name")
+		qparam = c.QueryParam("foo")
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	qexpected := "Bob"
+	code, body := request(GET, "/"+expected+"?foo="+qexpected, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+	assert.Equal(t, qexpected, qparam)
+}
+
+func InitEngine(t *testing.T) *Engine {
+	e := New()
+	if err := e.setup(); err != nil {
+		t.Errorf("setup is failed: %s", err.Error())
 	}
+	return e
 }
 
 func request(method, path string, e *Engine) (int, string) {
