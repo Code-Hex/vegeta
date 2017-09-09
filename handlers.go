@@ -68,7 +68,7 @@ func (e *Engine) PUT(path string, f HandlerFunc) {
 }
 
 func (e *Engine) Handle(method, path string, handler HandlerFunc) {
-	e.Router.Handle(method, path, func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	e.router.Handle(method, path, func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		ctx := e.CreateContext(w, r, p)
 		defer e.ReUseContext(ctx)
 		h := handler
@@ -76,6 +76,19 @@ func (e *Engine) Handle(method, path string, handler HandlerFunc) {
 		for i := len(e.middleware) - 1; i >= 0; i-- {
 			h = e.middleware[i](h)
 		}
-		h(ctx)
+		if err := h(ctx); err != nil {
+			e.HTTPErrorHandler(err, ctx)
+		}
 	})
+}
+
+func (e *Engine) Find(method, path string, c Context) {
+	ctx := c.(*ctx)
+	ctx.path = path
+	h, params, _ := e.router.Lookup(method, path)
+	ctx.params = params
+	ctx.handler = func(c Context) error {
+		h(c.Response(), c.Request(), c.Params())
+		return nil
+	}
 }

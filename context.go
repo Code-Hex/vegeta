@@ -11,13 +11,14 @@ import (
 
 	"github.com/Code-Hex/vegeta/internal/header"
 	"github.com/Code-Hex/vegeta/internal/mime"
-	"github.com/Code-Hex/vegeta/internal/status"
 	"github.com/julienschmidt/httprouter"
 )
 
 type ctx struct {
-	logger   *zap.Logger
-	xslate   *xslate.Xslate
+	logger     *zap.Logger
+	xslate     *xslate.Xslate
+	errhandler func(error, Context)
+
 	request  *http.Request
 	response *Response
 	params   httprouter.Params
@@ -47,10 +48,16 @@ type Context interface {
 	SetCookie(*http.Cookie)
 	Cookies() []*http.Cookie
 
+	Handler() HandlerFunc
+	SetHandler(HandlerFunc)
+
 	Error(error)
 
-	Get(key string) interface{}
-	Set(key string, val interface{})
+	Get(string) interface{}
+	Set(string, interface{})
+
+	NoContent(int) error
+	Redirect(code int, url string) error
 
 	Logger() *zap.Logger
 	Render(tmpl string, vars xslate.Vars) error
@@ -141,18 +148,30 @@ func (c *ctx) Set(key string, val interface{}) {
 	c.store.Store(key, val)
 }
 
+func (c *ctx) Handler() HandlerFunc {
+	return c.handler
+}
+
+func (c *ctx) SetHandler(h HandlerFunc) {
+	c.handler = h
+}
+
 func (c *ctx) Error(err error) {
-	var (
-		code    = status.InternalServerError
-		message = http.StatusText(code)
-	)
-	if he, ok := err.(*HTTPError); ok {
-		code = he.Code
-		message = he.Message.(string)
-	} else {
-		c.Logger().Error("Error", zap.Error(err))
+	c.errhandler(err, c)
+}
+
+func (c *ctx) NoContent(code int) error {
+	c.response.WriteHeader(code)
+	return nil
+}
+
+func (c *ctx) Redirect(code int, url string) error {
+	if code < 300 || code > 308 {
+		return ErrInvalidRedirectCode
 	}
-	c.Render("error.tt", xslate.Vars{"code": code, "message": message})
+	c.response.Header().Set(header.Location, url)
+	c.response.WriteHeader(code)
+	return nil
 }
 
 func (c *ctx) Logger() *zap.Logger {
@@ -164,26 +183,30 @@ func (c *ctx) Render(tmpl string, vars xslate.Vars) error {
 }
 
 // NewContext returns a Context instance.
-func (e *Engine) NewContext(r *http.Request, w http.ResponseWriter) Context {
+func (e *Engine) NewContext(w http.ResponseWriter, r *http.Request) Context {
 	return &ctx{
+		logger:     e.Logger,
+		xslate:     e.Xslate,
+		errhandler: e.HTTPErrorHandler,
+
 		request:  r,
 		response: NewResponse(w),
-		logger:   e.Logger,
-		xslate:   e.Xslate,
-		store:    &sync.Map{},
+		store:    new(sync.Map),
 		handler:  NotFoundHandler,
 	}
 }
 
 func (e *Engine) CreateContext(w http.ResponseWriter, r *http.Request, params httprouter.Params) Context {
-	ctx := e.Pool.Get().(*ctx)
-	ctx.request = r
-	ctx.response.reset(w)
-	ctx.path = r.RequestURI
-	ctx.params = params
-	return ctx
+	c := e.pool.Get().(*ctx)
+	c.request = r
+	c.response.reset(w)
+	c.path = r.RequestURI
+	c.params = params
+	c.handler = NotFoundHandler
+	c.query = nil
+	return c
 }
 
 func (e *Engine) ReUseContext(c Context) {
-	e.Pool.Put(c)
+	e.pool.Put(c)
 }

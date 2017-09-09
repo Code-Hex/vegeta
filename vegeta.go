@@ -26,11 +26,13 @@ type (
 	Engine struct {
 		*zap.Logger
 		*xslate.Xslate
-		Port       int
-		Pool       sync.Pool
-		Server     *http.Server
-		Router     *httprouter.Router
+		Port             int
+		Server           *http.Server
+		HTTPErrorHandler func(error, Context)
+
+		pool       sync.Pool
 		middleware []MiddlewareFunc
+		router     *httprouter.Router
 	}
 )
 
@@ -38,8 +40,8 @@ type (
 func New() *Engine {
 	return &Engine{
 		Port:   3000,
-		Router: httprouter.New(),
 		Server: new(http.Server),
+		router: httprouter.New(),
 	}
 }
 
@@ -50,12 +52,8 @@ func (e *Engine) Start(ctx context.Context) error {
 	return e.Serve(ctx)
 }
 
-func (v *Engine) listen() (net.Listener, error) {
-	var (
-		port string
-		li   net.Listener
-	)
-
+func (e *Engine) Listen() (net.Listener, error) {
+	var li net.Listener
 	if os.Getenv("SERVER_STARTER_PORT") != "" {
 		listeners, err := listener.ListenAll()
 		if err != nil {
@@ -64,25 +62,27 @@ func (v *Engine) listen() (net.Listener, error) {
 		if 0 < len(listeners) {
 			li = listeners[0]
 		}
-		port = os.Getenv("SERVER_STARTER_PORT")
 	}
 
 	if li == nil {
 		var err error
-		li, err = net.Listen("tcp", fmt.Sprintf(":%d", v.Port))
+		li, err = net.Listen("tcp", fmt.Sprintf(":%d", e.Port))
 		if err != nil {
 			return nil, errors.Wrap(err, "listen error")
 		}
-		port = fmt.Sprintf("%d", v.Port)
 	}
-	fmt.Println("Start Server at", port)
+
 	return li, nil
 }
 
 func (e *Engine) Serve(ctx context.Context) error {
-	li, err := e.listen()
+	li, err := e.Listen()
 	if err != nil {
 		return err
+	}
+
+	if os.Getenv("SERVER_STARTER_PORT") == "" {
+		fmt.Println("Start Server at", li.Addr().String())
 	}
 	return e.Server.Serve(li)
 }
@@ -91,6 +91,23 @@ func (e *Engine) Shutdown(ctx context.Context) error {
 	return e.Server.Shutdown(ctx)
 }
 
-func isProduction() bool {
-	return os.Getenv("STAGE") == "production"
+func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	method := r.Method
+	path := r.URL.RawPath
+	if path == "" {
+		path = r.URL.Path
+	}
+
+	c := e.NewContext(w, r)
+	e.Find(method, path, c)
+	defer e.ReUseContext(c)
+
+	h := c.Handler()
+	// Chain middleware
+	for i := len(e.middleware) - 1; i >= 0; i-- {
+		h = e.middleware[i](h)
+	}
+	if err := h(c); err != nil {
+		e.HTTPErrorHandler(err, c)
+	}
 }

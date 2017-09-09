@@ -14,14 +14,15 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const (
+var (
 	LogDir  = "log"
 	LogName = "vegeta_log"
 )
 
 func (e *Engine) setup() error {
-	e.Server.Handler = e.Router
-	e.Pool.New = func() interface{} {
+	e.Server.Handler = e.router
+	e.HTTPErrorHandler = e.DefaultHTTPErrorHandler
+	e.pool.New = func() interface{} {
 		return e.NewContext(nil, nil)
 	}
 	if err := e.setupXSlate(); err != nil {
@@ -88,4 +89,8 @@ func genLoggerConfig() zap.Config {
 		return zap.NewProductionConfig()
 	}
 	return zap.NewDevelopmentConfig()
+}
+
+func isProduction() bool {
+	return os.Getenv("STAGE") == "production"
 }

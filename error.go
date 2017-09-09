@@ -5,7 +5,9 @@ import (
 	"net/http"
 
 	"github.com/Code-Hex/vegeta/internal/status"
+	xslate "github.com/lestrrat/go-xslate"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 // Errors
@@ -41,4 +43,32 @@ func NewHTTPError(code int, message ...interface{}) *HTTPError {
 // Error makes it compatible with `error` interface.
 func (he *HTTPError) Error() string {
 	return fmt.Sprintf("code=%d, message=%v", he.Code, he.Message)
+}
+
+func (e *Engine) DefaultHTTPErrorHandler(err error, c Context) {
+	var (
+		code = http.StatusInternalServerError
+		msg  interface{}
+	)
+
+	if he, ok := err.(*HTTPError); ok {
+		code = he.Code
+		msg = he.Message
+	} else {
+		msg = http.StatusText(code)
+	}
+
+	e.Logger.Error("Catching error", zap.Error(err))
+
+	// Send response
+	if !c.Response().Committed {
+		if c.Request().Method == HEAD { // Issue #608
+			err = c.NoContent(code)
+		} else {
+			err = c.Render("error.tt", xslate.Vars{"code": code, "message": msg})
+		}
+		if err != nil {
+			e.Logger.Error("Send response error", zap.Error(err))
+		}
+	}
 }
