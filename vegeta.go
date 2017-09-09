@@ -92,22 +92,5 @@ func (e *Engine) Shutdown(ctx context.Context) error {
 }
 
 func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	method := r.Method
-	path := r.URL.RawPath
-	if path == "" {
-		path = r.URL.Path
-	}
-
-	c := e.NewContext(w, r)
-	e.Find(method, path, c)
-	defer e.ReUseContext(c)
-
-	h := c.Handler()
-	// Chain middleware
-	for i := len(e.middleware) - 1; i >= 0; i-- {
-		h = e.middleware[i](h)
-	}
-	if err := h(c); err != nil {
-		e.HTTPErrorHandler(err, c)
-	}
+	e.router.ServeHTTP(w, r)
 }
