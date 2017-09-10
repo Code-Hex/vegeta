@@ -2,10 +2,17 @@ package vegeta
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
+	"github.com/Code-Hex/vegeta/internal/header"
+	"github.com/Code-Hex/vegeta/internal/mime"
 	"github.com/Code-Hex/vegeta/internal/status"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -40,7 +47,7 @@ func TestMiddleware(t *testing.T) {
 		return c.String(status.OK, "OK")
 	})
 
-	c, b := request(GET, "/", e)
+	c, b := GETrequest("/", e)
 	assert.Equal(t, "123", buf.String())
 	assert.Equal(t, http.StatusOK, c)
 	assert.Equal(t, "OK", b)
@@ -54,7 +61,7 @@ func TestEchoMiddlewareError(t *testing.T) {
 		}
 	})
 	e.GET("/", NotFoundHandler)
-	c, _ := request(GET, "/", e)
+	c, _ := GETrequest("/", e)
 	assert.Equal(t, status.InternalServerError, c)
 }
 
@@ -97,7 +104,7 @@ func TestGET(t *testing.T) {
 	e.GET("/", func(c Context) error {
 		return c.String(status.OK, "OK")
 	})
-	code, body := request(GET, "/", e)
+	code, body := GETrequest("/", e)
 	assert.Equal(t, http.StatusOK, code)
 	assert.Equal(t, "OK", body)
 }
@@ -110,7 +117,7 @@ func TestGETWithParams(t *testing.T) {
 		return c.String(status.OK, "OK")
 	})
 	expected := "Alice"
-	code, body := request(GET, "/"+expected, e)
+	code, body := GETrequest("/"+expected, e)
 	assert.Equal(t, http.StatusOK, code)
 	assert.Equal(t, "OK", body)
 	assert.Equal(t, expected, param)
@@ -125,7 +132,7 @@ func TestGETWithQueryParam(t *testing.T) {
 		return c.String(status.OK, "OK")
 	})
 	expected := "Alice"
-	code, body := request(GET, "/?foo="+expected, e)
+	code, body := GETrequest("/?foo="+expected, e)
 	assert.Equal(t, http.StatusOK, code)
 	assert.Equal(t, "OK", body)
 	assert.Equal(t, expected, param)
@@ -142,7 +149,96 @@ func TestGETWithParameters(t *testing.T) {
 	})
 	expected := "Alice"
 	qexpected := "Bob"
-	code, body := request(GET, "/"+expected+"?foo="+qexpected, e)
+	code, body := GETrequest("/"+expected+"?foo="+qexpected, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+	assert.Equal(t, qexpected, qparam)
+}
+
+func TestPOST(t *testing.T) {
+	e := InitEngine(t)
+	e.POST("/", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	code, body := POSTrequest("/", e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+}
+
+func TestPOSTWithParams(t *testing.T) {
+	e := InitEngine(t)
+	var param string
+	e.POST("/:name", func(c Context) error {
+		param = c.Params().ByName("name")
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	code, body := POSTrequest("/"+expected, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+}
+
+func TestPOSTWithQueryParam(t *testing.T) {
+	e := InitEngine(t)
+
+	var param string
+	e.POST("/", func(c Context) error {
+		param = c.Request().FormValue("foo")
+		return c.String(status.OK, "OK")
+	})
+	values := url.Values{}
+	expected := "Alice"
+	values.Set("foo", expected)
+	code, body := POSTrequestWithForm("/", e,
+		strings.NewReader(values.Encode()),
+	)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+}
+
+func TestPOSTWithJSONParam(t *testing.T) {
+	e := InitEngine(t)
+	var param struct {
+		Name string `json:"name"`
+	}
+	e.POST("/", func(c Context) error {
+		body := c.Request().Body
+		err := json.NewDecoder(body).Decode(&param)
+		if err != nil {
+			t.Fatalf("json decode is failed: %s", err.Error())
+		}
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	code, body := POSTrequestWithJSON("/", e,
+		strings.NewReader(
+			fmt.Sprintf(`{"name":"%s"}`, expected),
+		),
+	)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param.Name)
+}
+
+func TestPOSTWithParameters(t *testing.T) {
+	e := InitEngine(t)
+
+	var param, qparam string
+	e.POST("/:name", func(c Context) error {
+		param = c.Params().ByName("name")
+		qparam = c.Request().FormValue("foo")
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	qexpected := "Bob"
+	values := url.Values{}
+	values.Set("foo", qexpected)
+	code, body := POSTrequestWithForm("/"+expected, e,
+		strings.NewReader(values.Encode()),
+	)
 	assert.Equal(t, http.StatusOK, code)
 	assert.Equal(t, "OK", body)
 	assert.Equal(t, expected, param)
@@ -157,8 +253,29 @@ func InitEngine(t *testing.T) *Engine {
 	return e
 }
 
-func request(method, path string, e *Engine) (int, string) {
-	req := httptest.NewRequest(method, path, nil)
+func GETrequest(path string, e *Engine) (int, string) {
+	req := httptest.NewRequest(GET, path, nil)
+	return request(req, e)
+}
+
+func POSTrequest(path string, e *Engine) (int, string) {
+	req := httptest.NewRequest(POST, path, nil)
+	return request(req, e)
+}
+
+func POSTrequestWithJSON(path string, e *Engine, body io.Reader) (int, string) {
+	req := httptest.NewRequest(POST, path, body)
+	req.Header.Set(header.ContentType, mime.ApplicationJSON)
+	return request(req, e)
+}
+
+func POSTrequestWithForm(path string, e *Engine, body io.Reader) (int, string) {
+	req := httptest.NewRequest(POST, path, body)
+	req.Header.Set(header.ContentType, mime.ApplicationForm)
+	return request(req, e)
+}
+
+func request(req *http.Request, e *Engine) (int, string) {
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	return rec.Code, rec.Body.String()
