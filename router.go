@@ -84,6 +84,7 @@ func (e *Engine) Handle(method, path string, handler HandlerFunc) {
 
 func (e *Engine) Find(method, path string, c Context) (valid bool) {
 	ctx := c.(*ctx)
+	defer e.ReUseContext(ctx)
 	ctx.path = path
 	h, params, _ := e.router.Lookup(method, path)
 	ctx.params = params

@@ -70,6 +70,50 @@ func TestFind(t *testing.T) {
 	assert.False(t, valid9)
 }
 
+func TestRouterPriority(t *testing.T) {
+	e := InitEngine(t)
+	// Routes
+	e.GET("/users", func(c Context) error {
+		c.Set("a", 1)
+		return nil
+	})
+	e.GET("/users/:id", func(c Context) error {
+		c.Set("b", 2)
+		return nil
+	})
+	e.GET("/meow/dew", func(c Context) error {
+		c.Set("c", 3)
+		return nil
+	})
+	e.GET("/hello/*world", func(c Context) error {
+		c.Set("d", 4)
+		return nil
+	})
+
+	c := e.NewContext(nil, nil).(*ctx)
+	// Route > /users
+	e.Find(GET, "/users", c)
+	c.handler(c)
+	assert.Equal(t, 1, c.Get("a"))
+
+	// Route > /users/:id
+	e.Find(GET, "/users/1", c)
+	c.handler(c)
+	assert.Equal(t, 2, c.Get("b"))
+	assert.Equal(t, "1", c.Params().ByName("id"))
+
+	// Route > /meow/dew
+	e.Find(GET, "/meow/dew", c)
+	c.handler(c)
+	assert.Equal(t, 3, c.Get("c"))
+
+	// Route > /users/*world
+	e.Find(GET, "/hello/world", c)
+	c.handler(c)
+	assert.Equal(t, 4, c.Get("d"))
+	assert.Equal(t, "/world", c.Params().ByName("world"))
+}
+
 func TestMiddleware(t *testing.T) {
 	e := InitEngine(t)
 	buf := new(bytes.Buffer)
