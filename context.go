@@ -53,8 +53,8 @@ type Context interface {
 
 	Error(error)
 
-	Get(string) interface{}
-	Set(string, interface{})
+	Get(interface{}) interface{}
+	Set(interface{}, interface{})
 
 	NoContent(int) error
 	Redirect(code int, url string) error
@@ -139,7 +139,7 @@ func (c *ctx) Cookies() []*http.Cookie {
 	return c.request.Cookies()
 }
 
-func (c *ctx) Get(key string) interface{} {
+func (c *ctx) Get(key interface{}) interface{} {
 	v, ok := c.store.Load(key)
 	if !ok {
 		return nil
@@ -147,7 +147,7 @@ func (c *ctx) Get(key string) interface{} {
 	return v
 }
 
-func (c *ctx) Set(key string, val interface{}) {
+func (c *ctx) Set(key interface{}, val interface{}) {
 	c.store.Store(key, val)
 }
 
@@ -214,7 +214,7 @@ func (e *Engine) CreateContext(w http.ResponseWriter, r *http.Request, params ht
 	c := e.pool.Get().(*ctx)
 	c.request = r
 	c.response.reset(w)
-	c.path = r.RequestURI
+	c.path = ""
 	c.params = params
 	c.handler = NotFoundHandler
 	c.query = nil
