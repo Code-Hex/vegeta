@@ -270,6 +270,63 @@ func TestHEADWithParameters(t *testing.T) {
 	assert.Equal(t, qexpected, qparam)
 }
 
+func TestOPTIONS(t *testing.T) {
+	e := InitEngine(t)
+	e.OPTIONS("/", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	code, body := OPTIONSrequest("/", e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+}
+
+func TestOPTIONSWithParams(t *testing.T) {
+	e := InitEngine(t)
+	var param string
+	e.OPTIONS("/:name", func(c Context) error {
+		param = c.Params().ByName("name")
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	code, body := OPTIONSrequest("/"+expected, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+}
+
+func TestOPTIONSWithQueryParam(t *testing.T) {
+	e := InitEngine(t)
+
+	var param string
+	e.OPTIONS("/", func(c Context) error {
+		param = c.QueryParam("foo")
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	code, body := OPTIONSrequest("/?foo="+expected, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+}
+
+func TestOPTIONSWithParameters(t *testing.T) {
+	e := InitEngine(t)
+
+	var param, qparam string
+	e.OPTIONS("/:name", func(c Context) error {
+		param = c.Params().ByName("name")
+		qparam = c.QueryParam("foo")
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	qexpected := "Bob"
+	code, body := OPTIONSrequest("/"+expected+"?foo="+qexpected, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+	assert.Equal(t, qexpected, qparam)
+}
+
 func TestPOST(t *testing.T) {
 	e := InitEngine(t)
 	e.POST("/", func(c Context) error {
@@ -381,6 +438,11 @@ func DELETErequest(path string, e *Engine) (int, string) {
 
 func HEADrequest(path string, e *Engine) (int, string) {
 	req := httptest.NewRequest(HEAD, path, nil)
+	return request(req, e)
+}
+
+func OPTIONSrequest(path string, e *Engine) (int, string) {
+	req := httptest.NewRequest(OPTIONS, path, nil)
 	return request(req, e)
 }
 
