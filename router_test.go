@@ -427,39 +427,52 @@ func InitEngine(t *testing.T) *Engine {
 
 // Like GET requests
 func GETrequest(path string, e *Engine) (int, string) {
-	req := httptest.NewRequest(GET, path, nil)
-	return request(req, e)
+	return LikeGETrequest(GET, path, e)
 }
 
 func DELETErequest(path string, e *Engine) (int, string) {
-	req := httptest.NewRequest(DELETE, path, nil)
-	return request(req, e)
+	return LikeGETrequest(DELETE, path, e)
 }
 
 func HEADrequest(path string, e *Engine) (int, string) {
-	req := httptest.NewRequest(HEAD, path, nil)
-	return request(req, e)
+	return LikeGETrequest(HEAD, path, e)
 }
 
 func OPTIONSrequest(path string, e *Engine) (int, string) {
-	req := httptest.NewRequest(OPTIONS, path, nil)
+	return LikeGETrequest(OPTIONS, path, e)
+}
+
+func LikeGETrequest(method, path string, e *Engine) (int, string) {
+	req := httptest.NewRequest(method, path, nil)
 	return request(req, e)
 }
 
 // Like POST requests
 func POSTrequest(path string, e *Engine) (int, string) {
-	req := httptest.NewRequest(POST, path, nil)
-	return request(req, e)
+	return LikePOSTrequest(POST, path, e)
 }
 
 func POSTrequestWithJSON(path string, e *Engine, body io.Reader) (int, string) {
-	req := httptest.NewRequest(POST, path, body)
+	return LikePOSTrequestWithJSON(POST, path, e, body)
+}
+
+func POSTrequestWithForm(path string, e *Engine, body io.Reader) (int, string) {
+	return LikePOSTrequestWithForm(POST, path, e, body)
+}
+
+func LikePOSTrequest(method, path string, e *Engine) (int, string) {
+	req := httptest.NewRequest(method, path, nil)
+	return request(req, e)
+}
+
+func LikePOSTrequestWithJSON(method, path string, e *Engine, body io.Reader) (int, string) {
+	req := httptest.NewRequest(method, path, body)
 	req.Header.Set(header.ContentType, mime.ApplicationJSON)
 	return request(req, e)
 }
 
-func POSTrequestWithForm(path string, e *Engine, body io.Reader) (int, string) {
-	req := httptest.NewRequest(POST, path, body)
+func LikePOSTrequestWithForm(method, path string, e *Engine, body io.Reader) (int, string) {
+	req := httptest.NewRequest(method, path, body)
 	req.Header.Set(header.ContentType, mime.ApplicationForm)
 	return request(req, e)
 }
