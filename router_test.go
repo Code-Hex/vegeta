@@ -416,6 +416,95 @@ func TestPOSTWithParameters(t *testing.T) {
 	assert.Equal(t, qexpected, qparam)
 }
 
+func TestPATCH(t *testing.T) {
+	e := InitEngine(t)
+	e.PATCH("/", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	code, body := PATCHrequest("/", e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+}
+
+func TestPATCHWithParams(t *testing.T) {
+	e := InitEngine(t)
+	var param string
+	e.PATCH("/:name", func(c Context) error {
+		param = c.Params().ByName("name")
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	code, body := PATCHrequest("/"+expected, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+}
+
+func TestPATCHWithQueryParam(t *testing.T) {
+	e := InitEngine(t)
+
+	var param string
+	e.PATCH("/", func(c Context) error {
+		param = c.Request().FormValue("foo")
+		return c.String(status.OK, "OK")
+	})
+	values := url.Values{}
+	expected := "Alice"
+	values.Set("foo", expected)
+	code, body := PATCHrequestWithForm("/", e,
+		strings.NewReader(values.Encode()),
+	)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+}
+
+func TestPATCHWithJSONParam(t *testing.T) {
+	e := InitEngine(t)
+	var param struct {
+		Name string `json:"name"`
+	}
+	e.PATCH("/", func(c Context) error {
+		body := c.Request().Body
+		err := json.NewDecoder(body).Decode(&param)
+		if err != nil {
+			t.Fatalf("json decode is failed: %s", err.Error())
+		}
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	code, body := PATCHrequestWithJSON("/", e,
+		strings.NewReader(
+			fmt.Sprintf(`{"name":"%s"}`, expected),
+		),
+	)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param.Name)
+}
+
+func TestPATCHWithParameters(t *testing.T) {
+	e := InitEngine(t)
+
+	var param, qparam string
+	e.PATCH("/:name", func(c Context) error {
+		param = c.Params().ByName("name")
+		qparam = c.Request().FormValue("foo")
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	qexpected := "Bob"
+	values := url.Values{}
+	values.Set("foo", qexpected)
+	code, body := PATCHrequestWithForm("/"+expected, e,
+		strings.NewReader(values.Encode()),
+	)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+	assert.Equal(t, qexpected, qparam)
+}
+
 // Utils
 func InitEngine(t *testing.T) *Engine {
 	e := New()
@@ -458,6 +547,18 @@ func POSTrequestWithJSON(path string, e *Engine, body io.Reader) (int, string) {
 
 func POSTrequestWithForm(path string, e *Engine, body io.Reader) (int, string) {
 	return LikePOSTrequestWithForm(POST, path, e, body)
+}
+
+func PATCHrequest(path string, e *Engine) (int, string) {
+	return LikePOSTrequest(PATCH, path, e)
+}
+
+func PATCHrequestWithJSON(path string, e *Engine, body io.Reader) (int, string) {
+	return LikePOSTrequestWithJSON(PATCH, path, e, body)
+}
+
+func PATCHrequestWithForm(path string, e *Engine, body io.Reader) (int, string) {
+	return LikePOSTrequestWithForm(PATCH, path, e, body)
 }
 
 func LikePOSTrequest(method, path string, e *Engine) (int, string) {
