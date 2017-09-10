@@ -18,6 +18,58 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestFind(t *testing.T) {
+	e := InitEngine(t)
+	// Route
+	e.GET("/", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	e.POST("/abc", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	e.PATCH("/abc/def", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	e.PUT("/abc/def/ghi", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	e.OPTIONS("/abc/def/ghi/j", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	e.HEAD("/abc/def/ghi/j", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+
+	c := e.NewContext(nil, nil).(*ctx)
+
+	valid1 := e.Find(GET, "/", c)
+	assert.True(t, valid1)
+
+	valid2 := e.Find(POST, "/abc", c)
+	assert.True(t, valid2)
+
+	valid3 := e.Find(PATCH, "/abc/def", c)
+	assert.True(t, valid3)
+
+	valid4 := e.Find(PUT, "/abc/def/ghi", c)
+	assert.True(t, valid4)
+
+	valid5 := e.Find(OPTIONS, "/abc/def/ghi/j", c)
+	assert.True(t, valid5)
+
+	valid6 := e.Find(HEAD, "/abc/def/ghi/j", c)
+	assert.True(t, valid6)
+
+	valid7 := e.Find(GET, "/abc", c)
+	assert.False(t, valid7)
+
+	valid8 := e.Find(POST, "/", c)
+	assert.False(t, valid8)
+
+	valid9 := e.Find(PUT, "/abc/def/ghi/j", c)
+	assert.False(t, valid9)
+}
+
 func TestMiddleware(t *testing.T) {
 	e := InitEngine(t)
 	buf := new(bytes.Buffer)

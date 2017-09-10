@@ -82,15 +82,19 @@ func (e *Engine) Handle(method, path string, handler HandlerFunc) {
 	})
 }
 
-func (e *Engine) Find(method, path string, c Context) {
+func (e *Engine) Find(method, path string, c Context) (valid bool) {
 	ctx := c.(*ctx)
 	ctx.path = path
 	h, params, _ := e.router.Lookup(method, path)
 	ctx.params = params
-	ctx.handler = func(c Context) error {
-		if h != nil {
+	if h != nil {
+		ctx.handler = func(c Context) error {
 			h(c.Response(), c.Request(), c.Params())
+			return nil
 		}
-		return nil
+		valid = true
+	} else {
+		ctx.handler = NotFoundHandler
 	}
+	return
 }
