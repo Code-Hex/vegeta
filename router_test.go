@@ -156,6 +156,63 @@ func TestGETWithParameters(t *testing.T) {
 	assert.Equal(t, qexpected, qparam)
 }
 
+func TestDELETE(t *testing.T) {
+	e := InitEngine(t)
+	e.DELETE("/", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	code, body := DELETErequest("/", e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+}
+
+func TestDELETEWithParams(t *testing.T) {
+	e := InitEngine(t)
+	var param string
+	e.DELETE("/:name", func(c Context) error {
+		param = c.Params().ByName("name")
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	code, body := DELETErequest("/"+expected, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+}
+
+func TestDELETEWithQueryParam(t *testing.T) {
+	e := InitEngine(t)
+
+	var param string
+	e.DELETE("/", func(c Context) error {
+		param = c.QueryParam("foo")
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	code, body := DELETErequest("/?foo="+expected, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+}
+
+func TestDELETEWithParameters(t *testing.T) {
+	e := InitEngine(t)
+
+	var param, qparam string
+	e.DELETE("/:name", func(c Context) error {
+		param = c.Params().ByName("name")
+		qparam = c.QueryParam("foo")
+		return c.String(status.OK, "OK")
+	})
+	expected := "Alice"
+	qexpected := "Bob"
+	code, body := DELETErequest("/"+expected+"?foo="+qexpected, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "OK", body)
+	assert.Equal(t, expected, param)
+	assert.Equal(t, qexpected, qparam)
+}
+
 func TestPOST(t *testing.T) {
 	e := InitEngine(t)
 	e.POST("/", func(c Context) error {
@@ -245,6 +302,7 @@ func TestPOSTWithParameters(t *testing.T) {
 	assert.Equal(t, qexpected, qparam)
 }
 
+// Utils
 func InitEngine(t *testing.T) *Engine {
 	e := New()
 	if err := e.setup(); err != nil {
@@ -253,11 +311,18 @@ func InitEngine(t *testing.T) *Engine {
 	return e
 }
 
+// Like GET requests
 func GETrequest(path string, e *Engine) (int, string) {
 	req := httptest.NewRequest(GET, path, nil)
 	return request(req, e)
 }
 
+func DELETErequest(path string, e *Engine) (int, string) {
+	req := httptest.NewRequest(DELETE, path, nil)
+	return request(req, e)
+}
+
+// Like POST requests
 func POSTrequest(path string, e *Engine) (int, string) {
 	req := httptest.NewRequest(POST, path, nil)
 	return request(req, e)
