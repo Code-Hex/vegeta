@@ -88,7 +88,9 @@ func (e *Engine) Find(method, path string, c Context) {
 	h, params, _ := e.router.Lookup(method, path)
 	ctx.params = params
 	ctx.handler = func(c Context) error {
-		h(c.Response(), c.Request(), c.Params())
+		if h != nil {
+			h(c.Response(), c.Request(), c.Params())
+		}
 		return nil
 	}
 }
