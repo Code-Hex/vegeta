@@ -44,6 +44,7 @@ func (he *HTTPError) Error() string {
 	return fmt.Sprintf("code=%d, message=%v", he.Code, he.Message)
 }
 
+// DefaultHTTPErrorHandler render error message to response
 func (e *Engine) DefaultHTTPErrorHandler(err error, c Context) {
 	var (
 		code = status.InternalServerError

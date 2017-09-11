@@ -21,7 +21,7 @@ type ctx struct {
 
 	request  *http.Request
 	response *Response
-	params   httprouter.Params
+	params   Params
 	path     string
 	query    url.Values
 	handler  HandlerFunc
@@ -181,7 +181,7 @@ func (c *ctx) Logger() *zap.Logger {
 	return c.logger
 }
 
-func (c *ctx) Render(tmpl string, vars xslate.Vars) error {
+func (c *ctx) Render(tmpl string, vars Vars) error {
 	return c.xslate.RenderInto(c.Response(), tmpl, vars)
 }
 
@@ -210,7 +210,7 @@ func (e *Engine) NewContext(w http.ResponseWriter, r *http.Request) Context {
 	}
 }
 
-func (e *Engine) CreateContext(w http.ResponseWriter, r *http.Request, params httprouter.Params) Context {
+func (e *Engine) CreateContext(w http.ResponseWriter, r *http.Request, params Params) Context {
 	c := e.pool.Get().(*ctx)
 	c.request = r
 	c.response.reset(w)

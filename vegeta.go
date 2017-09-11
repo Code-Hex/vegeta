@@ -22,6 +22,9 @@ type (
 	// Vars is alias of xslate.Vars
 	Vars = xslate.Vars
 
+	// Params is alias of httprouter.Params
+	Params = httprouter.Params
+
 	// Engine is context for this application
 	Engine struct {
 		*zap.Logger
