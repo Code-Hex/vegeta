@@ -1,6 +1,8 @@
 package vegeta
 
 import (
+	"encoding/json"
+	"encoding/xml"
 	"net/http"
 	"net/url"
 	"strings"
@@ -62,11 +64,16 @@ type Context interface {
 	Logger() *zap.Logger
 	Render(tmpl string, vars xslate.Vars) error
 
-	Blob(code int, contentType string, b []byte) error
+	SetContentType(code int, contentType string)
+	JSON(code int, i interface{}) error
+	XML(code int, i interface{}) error
 	String(code int, content string) error
 }
 
-const defaultMemory = 32 << 20 // 32 MB
+const (
+	indent        = "    "
+	defaultMemory = 32 << 20 // 32 MB
+)
 
 func (c *ctx) Path() string {
 	return c.path
@@ -185,15 +192,39 @@ func (c *ctx) Render(tmpl string, vars Vars) error {
 	return c.xslate.RenderInto(c.Response(), tmpl, vars)
 }
 
-func (c *ctx) Blob(code int, contentType string, b []byte) (err error) {
+func (c *ctx) SetContentType(code int, contentType string) {
 	c.response.Header().Set(header.ContentType, contentType)
 	c.response.WriteHeader(code)
-	_, err = c.response.Write(b)
-	return
+}
+
+func (c *ctx) JSON(code int, i interface{}) error {
+	c.SetContentType(code, mime.ApplicationJSONCharsetUTF8)
+	enc := json.NewEncoder(c.response)
+	if _, pretty := c.QueryParams()["pretty"]; pretty {
+		enc.SetIndent("", indent)
+	}
+	if err := enc.Encode(i); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *ctx) XML(code int, i interface{}) error {
+	c.SetContentType(code, mime.ApplicationXMLCharsetUTF8)
+	enc := xml.NewEncoder(c.response)
+	if _, pretty := c.QueryParams()["pretty"]; pretty {
+		enc.Indent("", indent)
+	}
+	if err := enc.Encode(i); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *ctx) String(code int, s string) (err error) {
-	return c.Blob(code, mime.TextPlainCharsetUTF8, []byte(s))
+	c.SetContentType(code, mime.TextPlainCharsetUTF8)
+	_, err = c.response.Write([]byte(s))
+	return
 }
 
 // NewContext returns a Context instance.
