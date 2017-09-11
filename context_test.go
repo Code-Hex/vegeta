@@ -3,12 +3,15 @@ package vegeta
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Code-Hex/vegeta/internal/header"
 	"github.com/Code-Hex/vegeta/internal/mime"
 	"github.com/Code-Hex/vegeta/internal/status"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -114,4 +117,70 @@ func TestXML(t *testing.T) {
 		assert.Equal(t, mime.ApplicationXMLCharsetUTF8, rec.Header().Get(header.ContentType))
 		assert.Equal(t, prettyXML, rec.Body.String())
 	}
+}
+
+func TestError(t *testing.T) {
+	e := InitEngine(t)
+	req := httptest.NewRequest(POST, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(rec, req).(*ctx)
+	c.Error(errors.New("error"))
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestNoContent(t *testing.T) {
+	e := InitEngine(t)
+	// NoContent
+	req := httptest.NewRequest(POST, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(rec, req).(*ctx)
+	c.NoContent(http.StatusOK)
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestContextCookie(t *testing.T) {
+	e := InitEngine(t)
+	req := httptest.NewRequest(GET, "/", nil)
+	rec := httptest.NewRecorder()
+	data := "foo=bar"
+	user := "user=John Manjirou"
+	req.Header.Add(header.Cookie, data)
+	req.Header.Add(header.Cookie, user)
+	c := e.NewContext(rec, req).(*ctx)
+
+	// Try to read single
+	cookie, err := c.Cookie("foo")
+	if assert.NoError(t, err) {
+		assert.Equal(t, "foo", cookie.Name)
+		assert.Equal(t, "bar", cookie.Value)
+	}
+
+	// Try to read multiple
+	for _, cookie := range c.Cookies() {
+		switch cookie.Name {
+		case "foo":
+			assert.Equal(t, "bar", cookie.Value)
+		case "user":
+			assert.Equal(t, "John Manjirou", cookie.Value)
+		}
+	}
+
+	// Write
+	ssid := url.QueryEscape("大塩平八郎のLAN")
+	cookie = &http.Cookie{
+		Name:     "SSID",
+		Value:    ssid,
+		Domain:   "history.love",
+		Path:     "/",
+		Expires:  time.Now(),
+		Secure:   true,
+		HttpOnly: true,
+	}
+	c.SetCookie(cookie)
+	cookieStr := rec.Header().Get(header.SetCookie)
+	assert.Contains(t, cookieStr, "SSID")
+	assert.Contains(t, cookieStr, ssid)
+	assert.Contains(t, cookieStr, "history.love")
+	assert.Contains(t, cookieStr, "Secure")
+	assert.Contains(t, cookieStr, "HttpOnly")
 }
