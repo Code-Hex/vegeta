@@ -9,7 +9,7 @@ import (
 )
 
 func TestRouter(t *testing.T) {
-	e := New()
+	e := InitEngine(t) // See router.go
 	want := httprouter.Params{
 		httprouter.Param{
 			Key:   "name",
@@ -17,7 +17,7 @@ func TestRouter(t *testing.T) {
 		},
 	}
 	routed := false
-	e.Handle("GET", "/user/:name", func(c Context) error {
+	e.Handle(GET, "/user/:name", func(c Context) error {
 		routed = true
 		ps := c.Params()
 		if !reflect.DeepEqual(ps, want) {
@@ -28,9 +28,6 @@ func TestRouter(t *testing.T) {
 
 	req := httptest.NewRequest(GET, "/user/gopher", nil)
 	rec := httptest.NewRecorder()
-	if err := e.setup(); err != nil {
-		t.Errorf("setup is failed: %s", err.Error())
-	}
 	e.ServeHTTP(rec, req)
 
 	if !routed {
