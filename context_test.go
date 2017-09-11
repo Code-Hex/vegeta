@@ -184,3 +184,15 @@ func TestContextCookie(t *testing.T) {
 	assert.Contains(t, cookieStr, "Secure")
 	assert.Contains(t, cookieStr, "HttpOnly")
 }
+
+func TestContextPath(t *testing.T) {
+	e := InitEngine(t)
+
+	e.GET("/users/:id", nil)
+	c := e.NewContext(nil, nil)
+	e.Find(GET, "/users/1", c)
+	assert.Equal(t, "/users/1", c.Path())
+
+	e.Find(GET, "/users/12345678", c)
+	assert.Equal(t, "/users/12345678", c.Path())
+}
