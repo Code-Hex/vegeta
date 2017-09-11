@@ -82,20 +82,50 @@ func (e *Engine) Handle(method, path string, handler HandlerFunc) {
 	})
 }
 
-func (e *Engine) Find(method, path string, c Context) (valid bool) {
-	ctx := c.(*ctx)
-	defer e.ReUseContext(ctx)
-	ctx.path = path
+func (e *Engine) Lookup(method, path string) (HandlerFunc, httprouter.Params) {
 	h, params, _ := e.router.Lookup(method, path)
-	ctx.params = params
+	var handler HandlerFunc
 	if h != nil {
-		ctx.handler = func(c Context) error {
+		handler = func(c Context) error {
 			h(c.Response(), c.Request(), c.Params())
 			return nil
 		}
+	} // else will return nil handler
+	return handler, params
+}
+
+func (e *Engine) Find(method, path string, c Context) (valid bool) {
+	ctx := c.(*ctx)
+	ctx.path = path
+	h, params := e.Lookup(method, path)
+	ctx.params = params
+	if h != nil {
+		ctx.handler = h
 		valid = true
 	} else {
-		ctx.handler = NotFoundHandler
+		ctx.handler = e.checkMethodNotAllowed(path)
 	}
+	e.ReUseContext(ctx)
 	return
+}
+
+var methods = []string{
+	DELETE,
+	GET,
+	HEAD,
+	OPTIONS,
+	PATCH,
+	POST,
+	PUT,
+}
+
+// NOTE: slow point
+func (e *Engine) checkMethodNotAllowed(path string) HandlerFunc {
+	for _, m := range methods {
+		h, _, _ := e.router.Lookup(m, path)
+		if h != nil {
+			return MethodNotAllowedHandler
+		}
+	}
+	return NotFoundHandler
 }

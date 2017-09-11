@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -17,6 +18,49 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestLookup(t *testing.T) {
+	e := InitEngine(t)
+	// Route
+	e.GET("/user/:name", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	e.POST("/user/:name", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	e.PATCH("/user/:name", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	e.PUT("/user/:name", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	e.OPTIONS("/user/:name", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+	e.HEAD("/user/:name", func(c Context) error {
+		return c.String(status.OK, "OK")
+	})
+
+	dict := map[string]string{
+		GET:     "/user/taro",
+		POST:    "/user/jiro",
+		PATCH:   "/user/hanako",
+		PUT:     "/user/higuchi",
+		OPTIONS: "/user/alice",
+		HEAD:    "/user/bob",
+	}
+
+	for method, path := range dict {
+		h, p := e.Lookup(method, path)
+		assert.NotNil(t, h)
+		base := filepath.Base(path)
+		assert.Equal(t, base, p.ByName("name"))
+	}
+
+	h, p := e.Lookup(GET, "/")
+	assert.Nil(t, h)
+	assert.Empty(t, p)
+}
 
 func TestFind(t *testing.T) {
 	e := InitEngine(t)
@@ -68,6 +112,40 @@ func TestFind(t *testing.T) {
 
 	valid9 := e.Find(PUT, "/abc/def/ghi/j", c)
 	assert.False(t, valid9)
+}
+
+func TestFindError(t *testing.T) {
+	e := InitEngine(t)
+	// Route
+	e.GET("/hello", func(c Context) error {
+		return c.String(status.OK, "Hello, Human")
+	})
+
+	// Check MethodNotAllowed is valid
+	for _, method := range methods {
+		req := httptest.NewRequest(method, "/hello", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(rec, req).(*ctx)
+		e.Find(method, "/hello", c)
+		err := c.handler(c)
+		if method == GET {
+			assert.Equal(t, "Hello, Human", rec.Body.String())
+		} else {
+			if err == nil {
+				t.Fatal("could not get error message from handler")
+			}
+			assert.Equal(t, ErrMethodNotAllowed.Message, err.(*HTTPError).Message)
+		}
+	}
+
+	// Check NotFound is valid
+	c := e.NewContext(nil, nil).(*ctx)
+	e.Find(GET, "/hallo", c)
+	err := c.handler(c)
+	if err == nil {
+		t.Fatal("could not get error message from handler")
+	}
+	assert.Equal(t, ErrNotFound.Message, err.(*HTTPError).Message)
 }
 
 func TestRouterPriority(t *testing.T) {
