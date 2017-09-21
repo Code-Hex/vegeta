@@ -9,9 +9,11 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/jinzhu/gorm"
 	"github.com/lestrrat/go-xslate"
 
 	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 	"github.com/lestrrat/go-server-starter/listener"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -29,6 +31,7 @@ type Vegeta struct {
 	Options
 	*echo.Echo
 	*zap.Logger
+	DB         *gorm.DB
 	Xslate     *xslate.Xslate
 	Controller *Controller
 	waitSignal chan os.Signal
@@ -48,6 +51,7 @@ func New() *Vegeta {
 }
 
 func (v *Vegeta) Run() int {
+	defer v.close()
 	if e := v.run(); e != nil {
 		exitCode, err := UnwrapErrors(e)
 		if v.StackTrace {
@@ -67,6 +71,12 @@ func (v *Vegeta) run() error {
 		return errors.Wrap(err, "Failed to prepare")
 	}
 	return v.serve()
+}
+
+func (v *Vegeta) close() {
+	if v.DB != nil {
+		v.DB.Close()
+	}
 }
 
 func (v *Vegeta) listen() (net.Listener, error) {
@@ -93,9 +103,6 @@ func (v *Vegeta) listen() (net.Listener, error) {
 }
 
 func (v *Vegeta) start(ctx context.Context) error {
-	if err := v.setup(); err != nil {
-		return err
-	}
 	li, err := v.listen()
 	if err != nil {
 		return err
@@ -119,7 +126,6 @@ func (v *Vegeta) serve() error {
 
 func (v *Vegeta) wait(ctx context.Context) error {
 	<-v.waitSignal
-	v.Controller.Close()
 	return v.Shutdown(ctx)
 }
 
@@ -129,7 +135,17 @@ func (v *Vegeta) prepare() error {
 		return errors.Wrap(err, "Failed to parse command line args")
 	}
 	v.Port = v.Options.Port
-	return v.setupHandlers()
+	if err := v.setup(); err != nil {
+		return err
+	}
+	if v.Migrate {
+		r := v.DB.AutoMigrate(&User{}, &Tag{}, &Data{})
+		if err := r.Error; err != nil {
+			return err
+		}
+		return makeIgnore()
+	}
+	return nil
 }
 
 func (v *Vegeta) registeredEndOfHook(c *Controller) {
@@ -137,6 +153,11 @@ func (v *Vegeta) registeredEndOfHook(c *Controller) {
 }
 
 func (v *Vegeta) setupHandlers() error {
+	v.HTTPErrorHandler = v.ErrorHandler
+	v.Use(
+		v.LogHandler(),
+		middleware.Recover(),
+	)
 	c, err := NewController(v)
 	if err != nil {
 		return err
@@ -164,6 +185,5 @@ func parseOptions(opts *Options, argv []string) ([]string, error) {
 		stdout.Write(opts.usage())
 		return nil, makeIgnore()
 	}
-
 	return o, nil
 }

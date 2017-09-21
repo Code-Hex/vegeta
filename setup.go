@@ -1,13 +1,14 @@
 package vegeta
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/Code-Hex/exit"
 	"github.com/Code-Hex/vegeta/internal/utils"
-	"github.com/labstack/echo/middleware"
+	"github.com/jinzhu/gorm"
 	rotatelogs "github.com/lestrrat/go-file-rotatelogs"
 	xslate "github.com/lestrrat/go-xslate"
 	"github.com/pkg/errors"
@@ -21,10 +22,12 @@ var (
 )
 
 func (v *Vegeta) setup() error {
-	if err := v.setupXSlate(); err != nil {
+	if err := v.setupDatabase(); err != nil {
+		return err
+	}
+	if err := v.setupXslate(); err != nil {
 		return errors.Wrap(err, "Failed to setup xslate")
 	}
-
 	err := v.setupLogger(
 		zap.AddCaller(),
 		zap.AddStacktrace(zap.ErrorLevel),
@@ -32,12 +35,24 @@ func (v *Vegeta) setup() error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to setup logger")
 	}
-	v.HTTPErrorHandler = v.ErrorHandler
-	v.Use(
-		v.LogHandler(),
-		middleware.Recover(),
-	)
+	return v.setupHandlers()
+}
 
+func (v *Vegeta) setupDatabase() error {
+	user := os.Getenv("MYSQL_USERNAME")
+	passwd := os.Getenv("MYSQL_PASSWORD")
+	database := os.Getenv("MYSQL_DATABASE")
+	info := fmt.Sprintf(
+		"%s:%s@/%s?charset=utf8&parseTime=True&loc=Local",
+		user,
+		passwd,
+		database,
+	)
+	db, err := gorm.Open("mysql", info)
+	if err != nil {
+		return err
+	}
+	v.DB = db
 	return nil
 }
 
@@ -72,7 +87,7 @@ func (v *Vegeta) setupLogger(opts ...zap.Option) error {
 	return nil
 }
 
-func (v *Vegeta) setupXSlate() (err error) {
+func (v *Vegeta) setupXslate() (err error) {
 	v.Xslate, err = xslate.New(xslate.Args{
 		"Loader": xslate.Args{
 			"LoadPaths": []string{"./templates"},

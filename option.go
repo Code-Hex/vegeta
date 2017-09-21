@@ -18,6 +18,7 @@ type Options struct {
 	Version bool `short:"v" long:"version" description:"print the version"`
 
 	Port       int  `short:"p" long:"port" description:"specify the port number" default:"3000"`
+	Migrate    bool `long:"migrate" description:"migrate mysql for this program"`
 	StackTrace bool `long:"trace" description:"display detail error messages"`
 }
 
