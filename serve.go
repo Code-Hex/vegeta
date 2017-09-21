@@ -1,20 +1,20 @@
-package main
+package vegeta
 
 import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/Code-Hex/vegeta"
-	"github.com/Code-Hex/vegeta/app/vegeta/controller"
-	"github.com/Code-Hex/vegeta/middleware"
-	"github.com/Code-Hex/vegeta/protos"
+	"github.com/lestrrat/go-xslate"
+
+	"github.com/labstack/echo"
+	"github.com/lestrrat/go-server-starter/listener"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -27,7 +27,10 @@ var stdout io.Writer = os.Stdout
 
 type Vegeta struct {
 	Options
-	Engine     *vegeta.Engine
+	*echo.Echo
+	*zap.Logger
+	Xslate     *xslate.Xslate
+	Controller *Controller
 	waitSignal chan os.Signal
 }
 
@@ -40,7 +43,7 @@ func New() *Vegeta {
 	)
 	return &Vegeta{
 		waitSignal: sigch,
-		Engine:     vegeta.New(),
+		Echo:       echo.New(),
 	}
 }
 
@@ -66,12 +69,49 @@ func (v *Vegeta) run() error {
 	return v.serve()
 }
 
+func (v *Vegeta) listen() (net.Listener, error) {
+	var li net.Listener
+	if os.Getenv("SERVER_STARTER_PORT") != "" {
+		listeners, err := listener.ListenAll()
+		if err != nil {
+			return nil, errors.Wrap(err, "server-starter error")
+		}
+		if 0 < len(listeners) {
+			li = listeners[0]
+		}
+	}
+
+	if li == nil {
+		var err error
+		li, err = net.Listen("tcp", fmt.Sprintf(":%d", v.Port))
+		if err != nil {
+			return nil, errors.Wrap(err, "listen error")
+		}
+	}
+
+	return li, nil
+}
+
+func (v *Vegeta) start(ctx context.Context) error {
+	if err := v.setup(); err != nil {
+		return err
+	}
+	li, err := v.listen()
+	if err != nil {
+		return err
+	}
+	if os.Getenv("SERVER_STARTER_PORT") == "" {
+		fmt.Println("Start Server at", li.Addr().String())
+	}
+	return v.Server.Serve(li)
+}
+
 func (v *Vegeta) serve() error {
 	ctx := context.Background()
 	go func() {
-		err := v.Engine.Start(ctx)
+		err := v.start(ctx)
 		if err != nil {
-			v.Engine.Warn("Server is stopped", zap.Error(err))
+			v.Warn("Server is stopped", zap.Error(err))
 		}
 	}()
 	return v.wait(ctx)
@@ -79,7 +119,8 @@ func (v *Vegeta) serve() error {
 
 func (v *Vegeta) wait(ctx context.Context) error {
 	<-v.waitSignal
-	return v.Engine.Shutdown(ctx)
+	v.Controller.Close()
+	return v.Shutdown(ctx)
 }
 
 func (v *Vegeta) prepare() error {
@@ -87,19 +128,24 @@ func (v *Vegeta) prepare() error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to parse command line args")
 	}
-	v.Engine.Port = v.Options.Port
+	v.Port = v.Options.Port
 	return v.setupHandlers()
 }
 
+func (v *Vegeta) registeredEndOfHook(c *Controller) {
+	v.Controller = c
+}
+
 func (v *Vegeta) setupHandlers() error {
-	v.Engine.UseMiddleWare(
-		middleware.AccessLog,
-		middleware.Recover,
-	)
-	v.Engine.GET("/test/:arg", controller.Index)
-	v.Engine.GET("/panic", controller.Panic)
-	s := grpc.NewServer()
-	protos.RegisterCollectionServer(s, NewAPIServer())
+	c, err := NewController(v)
+	if err != nil {
+		return err
+	}
+	v.registeredEndOfHook(c)
+
+	v.GET("/test/:arg", c.Index())
+	//s := grpc.NewServer()
+	//protos.RegisterCollectionServer(s, NewAPIServer())
 	//r.POST("/api", s.ServeHTTP)
 	return nil
 }

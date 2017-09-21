@@ -2,8 +2,10 @@ package main
 
 import (
 	"os"
+
+	"github.com/Code-Hex/vegeta"
 )
 
 func main() {
-	os.Exit(New().Run())
+	os.Exit(vegeta.New().Run())
 }
