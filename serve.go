@@ -10,7 +10,6 @@ import (
 	"syscall"
 
 	"github.com/jinzhu/gorm"
-	"github.com/lestrrat/go-xslate"
 
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -32,7 +31,6 @@ type Vegeta struct {
 	*echo.Echo
 	*zap.Logger
 	DB         *gorm.DB
-	Xslate     *xslate.Xslate
 	Controller *Controller
 	waitSignal chan os.Signal
 }
