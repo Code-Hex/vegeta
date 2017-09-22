@@ -1,13 +1,12 @@
 syntax = "proto3";
 
 package protos;
+import "google/api/annotations.proto";
 
 message RequestFromDevice {
-  string Timestamp = 1;
-  string Payload = 2;
-  string DeviceID = 3;
-  string IPAddress = 4;
-  bool is_success = 5;
+  string Payload = 1;
+  string DeviceID = 2;
+  string RemoteAddr = 3;
 }
 
 message ResultResponse {
@@ -15,5 +14,10 @@ message ResultResponse {
 }
 
 service Collection {
-  rpc RecvData(stream RequestFromDevice) returns (ResultResponse) {}
+  rpc RecvData(RequestFromDevice) returns (ResultResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/vegeta"
+      body: "*"
+    };
+  }
 }

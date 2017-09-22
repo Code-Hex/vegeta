@@ -32,7 +32,8 @@ type Data struct {
 	gorm.Model
 	TagID      uint   `gorm:"not null"`
 	RemoteAddr string `gorm:"not null"`
-	Serialized string `gorm:"not null" sql:"type:text;"`
+	DeviceID   string `gorm:"not null"`
+	Payload    string `gorm:"not null" sql:"type:text;"`
 }
 
 func CreateUser(db *gorm.DB, name, password string) (*User, error) {

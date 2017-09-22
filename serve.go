@@ -9,7 +9,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Code-Hex/vegeta/protos"
+
 	"github.com/jinzhu/gorm"
+	"google.golang.org/grpc"
 
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -151,21 +154,26 @@ func (v *Vegeta) registeredEndOfHook(c *Controller) {
 }
 
 func (v *Vegeta) setupHandlers() error {
-	v.HTTPErrorHandler = v.ErrorHandler
-	v.Use(
-		v.LogHandler(),
-		middleware.Recover(),
-	)
-	c, err := NewController(v)
+	c, err := v.NewController()
 	if err != nil {
 		return err
 	}
 	v.registeredEndOfHook(c)
 
+	// Add route for echo
 	v.GET("/test/:arg", c.Index())
-	//s := grpc.NewServer()
-	//protos.RegisterCollectionServer(s, NewAPIServer())
-	//r.POST("/api", s.ServeHTTP)
+
+	// Add for protocol buffers
+	s := grpc.NewServer()
+	protos.RegisterCollectionServer(s, v.NewAPI())
+	// Add api route
+	v.POST("/api/v1/vegeta", c.ServeAPI(s))
+
+	v.HTTPErrorHandler = v.ErrorHandler
+	v.Use(
+		v.LogHandler(),
+		middleware.Recover(),
+	)
 	return nil
 }
 
