@@ -2,8 +2,6 @@ package vegeta
 
 import (
 	"crypto/sha256"
-	"encoding/json"
-	"fmt"
 	"unicode"
 
 	"github.com/Code-Hex/saltissimo"
@@ -59,7 +57,7 @@ func TokenAuth(db *gorm.DB, uuid string) (*User, error) {
 	user := new(User)
 	result := db.First(user, "token = ?", uuid)
 	if err := result.Error; err != nil {
-		return nil, errors.Wrap(err, "Invalid user")
+		return nil, errors.Errorf("Failed to authenticate token: %s", uuid)
 	}
 	return user, nil
 }
@@ -147,6 +145,15 @@ func (u *User) AddTag(db *gorm.DB, tag Tag) error {
 	return nil
 }
 
+func (u *User) FindByTagName(db *gorm.DB, name string) (*Tag, error) {
+	tag := &Tag{}
+	result := db.Model(u).Related(&u.Tags, "Tags").Where("name = ?", name).Find(tag)
+	if result.RecordNotFound() {
+		return nil, errors.Errorf(`User %s's tag "%s" is not found`, u.Name, name)
+	}
+	return tag, nil
+}
+
 func FindTagByID(db *gorm.DB, id uint) (*Tag, error) {
 	tag := new(Tag)
 	if err := db.First(tag, id).Error; err != nil {
@@ -158,20 +165,16 @@ func FindTagByID(db *gorm.DB, id uint) (*Tag, error) {
 	return tag, nil
 }
 
-func IsValidJSON(s string) bool {
-	var js interface{}
-	return json.Unmarshal([]byte(s), &js) == nil
-}
-
 func (t *Tag) AddData(db *gorm.DB, data Data) error {
 	asn := db.Model(t).Association("SomeData")
 	if err := asn.Error; err != nil {
 		return err
 	}
-	if !IsValidJSON(data.Serialized) {
-		// TODO: output message via logger
-		fmt.Println("Invalid:", data.Serialized)
-		return errors.Errorf("Invalid json format: %s", data.Serialized)
+	if !utils.IsValidIPAddress(data.RemoteAddr) {
+		return errors.Errorf("Invalid ip address format: %s", data.RemoteAddr)
+	}
+	if !utils.IsValidJSON(data.Payload) {
+		return errors.Errorf("Invalid json format: %s", data.Payload)
 	}
 	if err := asn.Append(data).Error; err != nil {
 		return err

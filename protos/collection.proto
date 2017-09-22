@@ -7,17 +7,13 @@ message RequestFromDevice {
   string Payload = 1;
   string DeviceID = 2;
   string RemoteAddr = 3;
+  string TagName = 4;
+  string Token = 5;
 }
 
 message ResultResponse {
-  bool is_success = 1;
 }
 
 service Collection {
-  rpc RecvData(RequestFromDevice) returns (ResultResponse) {
-    option (google.api.http) = {
-      post: "/api/v1/vegeta"
-      body: "*"
-    };
-  }
+  rpc RecvData(RequestFromDevice) returns (ResultResponse) {}
 }

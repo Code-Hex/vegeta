@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 
 	uuid "github.com/satori/go.uuid"
@@ -9,6 +11,15 @@ import (
 
 func GenerateUUID() string {
 	return fmt.Sprintf("%s", uuid.NewV4())
+}
+
+func IsValidIPAddress(addr string) bool {
+	return net.ParseIP(addr) != nil
+}
+
+func IsValidJSON(s string) bool {
+	var js interface{}
+	return json.Unmarshal([]byte(s), &js) == nil
 }
 
 func Exists(path string) (bool, error) {
