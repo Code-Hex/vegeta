@@ -2,14 +2,12 @@ package vegeta
 
 import (
 	"net/http"
-	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
 	xslate "github.com/lestrrat/go-xslate"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
 )
 
 type Controller struct {
@@ -42,16 +40,5 @@ func (c *Controller) Index() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		arg := ctx.Param("arg")
 		return ctx.String(http.StatusOK, arg)
-	}
-}
-
-func (c *Controller) ServeAPI(s *grpc.Server) echo.HandlerFunc {
-	return func(ctx echo.Context) error {
-		r, w := ctx.Request(), ctx.Response()
-		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
-			s.ServeHTTP(w, r)
-			return nil
-		}
-		return echo.ErrUnsupportedMediaType
 	}
 }
