@@ -33,13 +33,15 @@ proto: proto-plugin # proto-gateway proto-swagger
 setup:
 	@gem install sass
 	@gem install bourbon
-	@cd frontend/stylesheets && bourbon install
+	@gem install neat
+	@cd frontend/stylesheets && bourbon install && neat install
 
 install-bourbon:
 	@cd frontend/stylesheets && bourbon install
 
 sass:
-	@sass frontend/stylesheets/main.scss:assets/css/main.css
+	@sass frontend/stylesheets/main.scss:frontend/stylesheets/main.css
+	@cp frontend/stylesheets/main.css assets/css
 
 build:
 	@go generate
