@@ -1,15 +1,17 @@
 package vegeta
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/Code-Hex/saltissimo"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 	"go.uber.org/zap"
 )
 
-type jwtCustomClaims struct {
+type jwtVegetaClaims struct {
 	Name  string `json:"name"`
 	Admin bool   `json:"admin"`
 	jwt.StandardClaims
@@ -26,9 +28,55 @@ func init() {
 }
 
 func (v *Vegeta) registerRoutes() {
-	v.GET("/test/:arg", Index())
+	v.GET("/", Index())
 	v.GET("/login", Login())
 	v.POST("/auth", Auth())
+
+	auth := v.Group("/mypage")
+	auth.Use(
+		func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(c echo.Context) error {
+				err := next(c)
+				if err != nil {
+					v.Error("Error via restricted group", zap.Error(err))
+					return c.Redirect(http.StatusFound, "/login")
+				}
+				return nil
+			}
+		},
+		middleware.JWTWithConfig(middleware.JWTConfig{
+			Claims:      &jwtVegetaClaims{},
+			SigningKey:  secret,
+			TokenLookup: "cookie:token",
+			ContextKey:  "user",
+		}),
+	)
+	auth.GET("", MyPage())
+	auth.GET("/settings", Settings())
+}
+
+func MyPage() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.(*Context)
+		token, ok := ctx.Get("user").(*jwt.Token)
+		if !ok {
+			ctx.Zap.Info("Failed to check user is authed")
+			return ctx.Redirect(http.StatusFound, "/login")
+		}
+		user := token.Claims.(*jwtVegetaClaims)
+		return ctx.RenderTemplate("index.tt", Vars{"name": user.Name})
+	}
+}
+
+func Settings() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.(*Context)
+		user, ok := ctx.Get("user").(*jwtVegetaClaims)
+		if !ok {
+			return ctx.RenderTemplate("index.tt", Vars{"name": ""})
+		}
+		return ctx.RenderTemplate("index.tt", Vars{"name": user.Name})
+	}
 }
 
 func Login() echo.HandlerFunc {
@@ -46,9 +94,9 @@ func Auth() echo.HandlerFunc {
 		user, err := BasicAuth(ctx.DB, username, password)
 		if err != nil {
 			ctx.Zap.Info("Failed to auth user", zap.String("username", username))
-			return err
+			return ctx.Redirect(http.StatusFound, "/login")
 		}
-		claims := &jwtCustomClaims{
+		claims := &jwtVegetaClaims{
 			Name:  user.Name,
 			Admin: false,
 			StandardClaims: jwt.StandardClaims{
@@ -58,17 +106,16 @@ func Auth() echo.HandlerFunc {
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 		t, err := token.SignedString(secret)
 		if err != nil {
-			return err
+			ctx.Zap.Info("Failed to get jwt", zap.String("username", username))
+			return ctx.Redirect(http.StatusFound, "/login")
 		}
-		return ctx.RenderTemplate("index.tt", Vars{"token": t})
+		return ctx.RedirectWithJWT(http.StatusFound, t, "/mypage")
 	}
 }
 
 func Index() echo.HandlerFunc {
 	return func(c echo.Context) error {
-		cc := c.(*Context)
-		cc.Zap.Info("Hello", zap.String("Test", "Hi"))
-		arg := cc.Param("arg")
-		return cc.RenderTemplate("index.tt", Vars{"arg": arg})
+		ctx := c.(*Context)
+		return ctx.RenderTemplate("index.tt", Vars{"name": ""})
 	}
 }

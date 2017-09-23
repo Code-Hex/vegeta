@@ -1,6 +1,8 @@
 package vegeta
 
 import (
+	"net/http"
+
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
 	xslate "github.com/lestrrat/go-xslate"
@@ -44,4 +46,19 @@ func (c *Context) setupXslate() (err error) {
 
 func (c *Context) RenderTemplate(tmpl string, vars Vars) error {
 	return c.Xslate.RenderInto(c.Response(), tmpl, vars)
+}
+
+func (c *Context) RedirectWithJWT(code int, token, url string) error {
+	if code < 300 || code > 308 {
+		return echo.ErrInvalidRedirectCode
+	}
+	c.SetCookie(&http.Cookie{
+		Name:     "token",
+		Value:    token,
+		HttpOnly: true,
+	})
+	resp := c.Response()
+	resp.Header().Set(echo.HeaderLocation, url)
+	resp.WriteHeader(code)
+	return nil
 }
