@@ -12,6 +12,7 @@ import (
 
 type User struct {
 	gorm.Model
+	Admin    bool   `gorm:"not null"`
 	Name     string `gorm:"not null"`
 	Password string `gorm:"not null"`
 	Salt     string `gorm:"not null"`
