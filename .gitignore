@@ -4,7 +4,9 @@
 !LICENSE
 !.gitignore
 !.travis.yml
+!Makefile
 vendor
 *log
 *.pid
 .DS_Store
+.sass-cache
