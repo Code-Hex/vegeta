@@ -15,6 +15,8 @@ type Context struct {
 	Xslate *xslate.Xslate
 }
 
+type Vars = xslate.Vars
+
 func (v *Vegeta) NewContext(ctx echo.Context) (*Context, error) {
 	c := &Context{
 		Context: ctx,
@@ -40,6 +42,6 @@ func (c *Context) setupXslate() (err error) {
 	return // nil
 }
 
-func (c *Context) RenderTemplate(tmpl string, vars xslate.Vars) error {
+func (c *Context) RenderTemplate(tmpl string, vars Vars) error {
 	return c.Xslate.RenderInto(c.Response(), tmpl, vars)
 }

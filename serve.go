@@ -11,7 +11,9 @@ import (
 	"strings"
 	"syscall"
 
+	static "github.com/Code-Hex/echo-static"
 	"github.com/Code-Hex/vegeta/protos"
+	assetfs "github.com/elazarl/go-bindata-assetfs"
 
 	"github.com/jinzhu/gorm"
 	"google.golang.org/grpc"
@@ -176,6 +178,16 @@ func (v *Vegeta) prepare() error {
 	return nil
 }
 
+//go:generate go-bindata -pkg vegeta -o bindata.go assets/...
+func newAssets(root string) *assetfs.AssetFS {
+	return &assetfs.AssetFS{
+		Asset:     Asset,
+		AssetDir:  AssetDir,
+		AssetInfo: AssetInfo,
+		Prefix:    root,
+	}
+}
+
 func (v *Vegeta) setupHandlers() error {
 	v.HTTPErrorHandler = v.ErrorHandler
 	v.Use(func(h echo.HandlerFunc) echo.HandlerFunc {
@@ -190,10 +202,11 @@ func (v *Vegeta) setupHandlers() error {
 	v.Use(
 		v.LogHandler(),
 		middleware.Recover(),
+		static.ServeRoot("/assets", newAssets("assets")),
 	)
 
 	// Add route for echo
-	v.GET("/test/:arg", Index())
+	v.registerRoutes()
 
 	return nil
 }

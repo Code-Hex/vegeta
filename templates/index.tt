@@ -1,0 +1,3 @@
+[% WRAPPER 'layout/wrapper.tt' WITH title = "index" %]
+<h1>[% arg %]</h1>
+[% END %]
