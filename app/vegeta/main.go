@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/Code-Hex/vegeta"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {

@@ -36,7 +36,6 @@ type Vegeta struct {
 	*echo.Echo
 	*zap.Logger
 	DB         *gorm.DB
-	Controller *Controller
 	GRPC       *grpc.Server
 	waitSignal chan os.Signal
 }
@@ -121,6 +120,20 @@ func (v *Vegeta) startServer() {
 	}
 }
 
+func (v *Vegeta) serveGRPC() {
+	protos.RegisterCollectionServer(v.GRPC, v.NewAPI())
+	port := v.Port + 1
+	li, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		v.Error("Failed to get port for grpc", zap.Error(err))
+		return
+	}
+	fmt.Println("Start GRPC Server at", li.Addr().String())
+	if err := v.GRPC.Serve(li); err != nil {
+		v.Error("Failed to serve grpc", zap.Error(err))
+	}
+}
+
 func (v *Vegeta) serve() error {
 	ctx := context.Background()
 	go v.startServer()
@@ -163,40 +176,26 @@ func (v *Vegeta) prepare() error {
 	return nil
 }
 
-func (v *Vegeta) registeredEndOfHook(c *Controller) {
-	v.Controller = c
-}
-
 func (v *Vegeta) setupHandlers() error {
-	c, err := v.NewController()
-	if err != nil {
-		return err
-	}
-	v.registeredEndOfHook(c)
-
-	// Add route for echo
-	v.GET("/test/:arg", c.Index())
-
 	v.HTTPErrorHandler = v.ErrorHandler
+	v.Use(func(h echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			cc, err := v.NewContext(c)
+			if err != nil {
+				return err
+			}
+			return h(cc)
+		}
+	})
 	v.Use(
 		v.LogHandler(),
 		middleware.Recover(),
 	)
-	return nil
-}
 
-func (v *Vegeta) serveGRPC() {
-	protos.RegisterCollectionServer(v.GRPC, v.NewAPI())
-	port := v.Port + 1
-	li, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	if err != nil {
-		v.Error("Failed to get port for grpc", zap.Error(err))
-		return
-	}
-	fmt.Println("Start GRPC Server at", li.Addr().String())
-	if err := v.GRPC.Serve(li); err != nil {
-		v.Error("Failed to serve grpc", zap.Error(err))
-	}
+	// Add route for echo
+	v.GET("/test/:arg", Index())
+
+	return nil
 }
 
 func parseOptions(opts *Options, argv []string) ([]string, error) {
