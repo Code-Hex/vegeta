@@ -35,6 +35,7 @@ type Vegeta struct {
 	*zap.Logger
 	DB         *gorm.DB
 	Controller *Controller
+	GRPC       *grpc.Server
 	waitSignal chan os.Signal
 }
 
@@ -48,6 +49,7 @@ func New() *Vegeta {
 	return &Vegeta{
 		waitSignal: sigch,
 		Echo:       echo.New(),
+		GRPC:       grpc.NewServer(),
 	}
 }
 
@@ -103,30 +105,30 @@ func (v *Vegeta) listen() (net.Listener, error) {
 	return li, nil
 }
 
-func (v *Vegeta) start(ctx context.Context) error {
+func (v *Vegeta) startServer() {
 	li, err := v.listen()
 	if err != nil {
-		return err
+		v.Error("Failed to get port for server", zap.Error(err))
+		return
 	}
 	if os.Getenv("SERVER_STARTER_PORT") == "" {
 		fmt.Println("Start Server at", li.Addr().String())
 	}
-	return v.Server.Serve(li)
+	if err := v.Server.Serve(li); err != nil {
+		v.Error("Server is stopped", zap.Error(err))
+	}
 }
 
 func (v *Vegeta) serve() error {
 	ctx := context.Background()
-	go func() {
-		err := v.start(ctx)
-		if err != nil {
-			v.Warn("Server is stopped", zap.Error(err))
-		}
-	}()
+	go v.startServer()
+	go v.serveGRPC()
 	return v.wait(ctx)
 }
 
 func (v *Vegeta) wait(ctx context.Context) error {
 	<-v.waitSignal
+	v.GRPC.GracefulStop()
 	return v.Shutdown(ctx)
 }
 
@@ -163,18 +165,26 @@ func (v *Vegeta) setupHandlers() error {
 	// Add route for echo
 	v.GET("/test/:arg", c.Index())
 
-	// Add for protocol buffers
-	s := grpc.NewServer()
-	protos.RegisterCollectionServer(s, v.NewAPI())
-	// Add api route
-	v.POST("/api/v1/vegeta", c.ServeAPI(s))
-
 	v.HTTPErrorHandler = v.ErrorHandler
 	v.Use(
 		v.LogHandler(),
 		middleware.Recover(),
 	)
 	return nil
+}
+
+func (v *Vegeta) serveGRPC() {
+	protos.RegisterCollectionServer(v.GRPC, v.NewAPI())
+	port := v.Port + 1
+	li, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		v.Error("Failed to get port for grpc", zap.Error(err))
+		return
+	}
+	fmt.Println("Start GRPC Server at", li.Addr().String())
+	if err := v.GRPC.Serve(li); err != nil {
+		v.Error("Failed to serve grpc", zap.Error(err))
+	}
 }
 
 func parseOptions(opts *Options, argv []string) ([]string, error) {

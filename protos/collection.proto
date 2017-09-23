@@ -5,7 +5,7 @@ import "google/api/annotations.proto";
 
 message RequestFromDevice {
   string Payload = 1;
-  string DeviceID = 2;
+  string Hostname = 2;
   string RemoteAddr = 3;
   string TagName = 4;
   string Token = 5;
@@ -15,5 +15,5 @@ message ResultResponse {
 }
 
 service Collection {
-  rpc RecvData(RequestFromDevice) returns (ResultResponse) {}
+  rpc AddData(RequestFromDevice) returns (ResultResponse) {}
 }

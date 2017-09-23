@@ -30,7 +30,7 @@ type Data struct {
 	gorm.Model
 	TagID      uint   `gorm:"not null"`
 	RemoteAddr string `gorm:"not null"`
-	DeviceID   string `gorm:"not null"`
+	Hostname   string `gorm:"not null"`
 	Payload    string `gorm:"not null" sql:"type:text;"`
 }
 
