@@ -7,6 +7,8 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/Code-Hex/vegeta/protos"
@@ -137,7 +139,17 @@ func (v *Vegeta) prepare() error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to parse command line args")
 	}
-	v.Port = v.Options.Port
+	if s := os.Getenv("SERVER_STARTER_PORT"); s != "" {
+		port := strings.Split(s, "=")
+		i, err := strconv.ParseInt(port[0], 10, 32)
+		if err != nil {
+			return err
+		}
+		v.Port = int(i)
+	} else {
+		v.Port = v.Options.Port
+	}
+
 	if err := v.setup(); err != nil {
 		return err
 	}
