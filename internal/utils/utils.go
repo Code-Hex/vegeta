@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 
 	uuid "github.com/satori/go.uuid"
 )
 
-func GenerateUUID() string {
-	return fmt.Sprintf("%s", uuid.NewV4())
+var b64 = regexp.MustCompile(`^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{4}|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)$`)
+
+func IsValidBase64(s string) bool {
+	return b64.Match([]byte(s))
 }
 
 func IsValidIPAddress(addr string) bool {
@@ -21,6 +24,10 @@ func IsValidIPAddress(addr string) bool {
 func IsValidJSON(s string) bool {
 	var js interface{}
 	return json.Unmarshal([]byte(s), &js) == nil
+}
+
+func GenerateUUID() string {
+	return fmt.Sprintf("%s", uuid.NewV4())
 }
 
 func Exists(path string) (bool, error) {
