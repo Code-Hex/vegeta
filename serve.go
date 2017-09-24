@@ -202,8 +202,13 @@ func (v *Vegeta) setupHandlers() error {
 	v.Use(
 		v.LogHandler(),
 		middleware.Recover(),
-		static.ServeRoot("/assets", newAssets("assets")),
 	)
+
+	if isProduction() {
+		v.Use(static.ServeRoot("/assets", newAssets("assets")))
+	} else {
+		v.Static("/assets", "assets")
+	}
 
 	// Add route for echo
 	v.registerRoutes()
