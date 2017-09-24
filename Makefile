@@ -43,7 +43,7 @@ sass:
 	@sass frontend/stylesheets/main.scss:frontend/stylesheets/main.css
 	@cp frontend/stylesheets/main.css assets/css
 
-build:
+build: sass
 	@go generate
 	@go build $(server)
 
