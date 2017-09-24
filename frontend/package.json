@@ -1,0 +1,26 @@
+{
+  "name": "vegeta",
+  "version": "0.0.1",
+  "description": "Project to collect large amounts of vegetable data using IoT",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "vegeta",
+    "IoT"
+  ],
+  "path": {
+    "assetsDir": "../assets/"
+  },
+  "author": "CodeHex",
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "browser-sync": "^2.18.13",
+    "gulp": "^3.9.1",
+    "gulp-autoprefixer": "^4.0.0",
+    "gulp-plumber": "^1.1.0",
+    "gulp-sass": "^3.1.0",
+    "node-bourbon": "^4.2.8",
+    "node-neat": "^2.0.0-beta.0"
+  }
+}
