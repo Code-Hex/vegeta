@@ -1,3 +1,5 @@
+"use strict";
+
 var path = require('path');
 var fs = require('fs');
 var pkg = JSON.parse(fs.readFileSync('./package.json'));
@@ -14,19 +16,35 @@ var autoprefixer = require('gulp-autoprefixer');
 // error handling
 var plumber = require('gulp-plumber');
 
+// sass concat
+var concat = require('gulp-concat');
+
 // for sass
-var bourbon = require("node-bourbon").includePaths;
-var neat = require("node-neat").includePaths;
+var bourbon = require("node-bourbon");
+var neat = require("node-neat");
+
+// minify css
+var minify = require('gulp-minify-css');
+
+// merge
+var merge = require('merge-stream');
 
 gulp.task('sass', function() {
-  gulp.src(path.join(assetsPath, 'sass/main.scss'))
-  .pipe(plumber())
-  .pipe(sass({
-    includePaths: bourbon,
-    includePaths: neat
-  }))
-  .pipe(autoprefixer())
-  .pipe(gulp.dest(path.join(assetsPath, 'css/')));
+  var scssStream = gulp.src('sass/*.scss')
+    .pipe(concat('concat.scss'))
+    .pipe(plumber())
+    .pipe(sass({
+      includePaths: [
+        bourbon.includePaths,
+        neat.includePaths
+      ]
+    }))
+    .pipe(autoprefixer());
+  
+  merge(scssStream)
+    .pipe(concat('main.css'))
+    .pipe(minify())
+    .pipe(gulp.dest(path.join(assetsPath, 'css/')));
 });
 
 gulp.task("browserSync", function() {
