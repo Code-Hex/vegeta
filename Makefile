@@ -30,18 +30,8 @@ proto-plugin:
 
 proto: proto-plugin # proto-gateway proto-swagger
 
-setup:
-	@gem install sass
-	@gem install bourbon
-	@gem install neat
-	@cd frontend/stylesheets && bourbon install && neat install
-
-install-bourbon:
-	@cd frontend/stylesheets && bourbon install
-
 sass:
-	@sass frontend/stylesheets/main.scss:frontend/stylesheets/main.css
-	@cp frontend/stylesheets/main.css assets/css
+	@cd frontend && gulp sass
 
 build: sass
 	@go generate
