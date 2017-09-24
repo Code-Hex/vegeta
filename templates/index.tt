@@ -1,7 +1,19 @@
 [% WRAPPER 'layout/wrapper.tt' WITH title = "index" %]
-[% IF name != "" %]
-<h1>Hello, [% name %]</h1>
-[% ELSE %]
-<h1>Hello, world</h1>
-[% END %]
+<header class="page-heading">
+  <div class="container">
+    <h1>Vegeta</h1>
+    <p>Project to collect large amounts of vegetable data using IoT.</p>
+  </div>
+</header>
+<div class="content">
+  [% IF name != "" %]
+  <div class="container-fluid">
+    <h1>Hello, [% name %]</h1>
+  </div>
+  [% ELSE %]
+  <div class="container-fluid">
+    <h1>Hello, world</h1>
+  </div>
+  [% END %]
+</div>
 [% END %]
