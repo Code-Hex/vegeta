@@ -2,6 +2,7 @@ package vegeta
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
@@ -18,6 +19,10 @@ type Context struct {
 }
 
 type Vars = xslate.Vars
+
+func CurrentYear() int {
+	return time.Now().Year()
+}
 
 func (v *Vegeta) NewContext(ctx echo.Context) (*Context, error) {
 	c := &Context{
@@ -37,6 +42,9 @@ func (c *Context) setupXslate() (err error) {
 			"LoadPaths": []string{"./templates"},
 		},
 		"Parser": xslate.Args{"Syntax": "TTerse"},
+		"Functions": xslate.Args{
+			"year": CurrentYear,
+		},
 	})
 	if err != nil {
 		return errors.Wrap(err, "Failed to construct xslate")
@@ -61,4 +69,13 @@ func (c *Context) RedirectWithJWT(code int, token, url string) error {
 	resp.Header().Set(echo.HeaderLocation, url)
 	resp.WriteHeader(code)
 	return nil
+}
+
+var expiredAt = time.Now()
+
+func (c *Context) ExpiredCookie() {
+	for _, cookie := range c.Cookies() {
+		cookie.Expires = expiredAt
+		c.SetCookie(cookie)
+	}
 }

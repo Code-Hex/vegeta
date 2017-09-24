@@ -86,6 +86,14 @@ func Login() echo.HandlerFunc {
 	}
 }
 
+func Logout() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.(*Context)
+		ctx.ExpiredCookie()
+		return ctx.Redirect(http.StatusFound, "/login")
+	}
+}
+
 func Auth() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
