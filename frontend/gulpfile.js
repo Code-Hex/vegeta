@@ -50,5 +50,5 @@ gulp.task('sass', function() {
 // If you run `gulp` command, it is monioring sass files.
 // Invoke auto compile after sass files are changed.
 gulp.task('watch', ["sass"], function() {
-  gulp.watch(path.join(assetsPath, 'sass/**/*.scss'),['sass']);
+  gulp.watch('sass/*.scss', ['sass']);
 });
