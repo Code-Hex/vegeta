@@ -69,25 +69,3 @@ $min-grid: (
 		line-height: 1;
 	}
 }
-
-/*
- * footer
- */
-
-@mixin sticky-footer($footer-height) {
-	.content {
-		padding-bottom: $footer-height;
-	}
-	
-	footer {
-		background-color: #212529;
-		color: #fff;
-		width: 100%;
-		text-align: center;
-		height: $footer-height;
-		position: absolute;
-		bottom: 0;
-	}
-}
-
-@include sticky-footer(30px);

@@ -47,16 +47,8 @@ gulp.task('sass', function() {
     .pipe(gulp.dest(path.join(assetsPath, 'css/')));
 });
 
-gulp.task("browserSync", function() {
-  browserSync({
-    server: {
-      baseDir: assetsPath
-    }
-  })
-});
-
 // If you run `gulp` command, it is monioring sass files.
 // Invoke auto compile after sass files are changed.
-gulp.task('watch', ["browserSync", "sass"], function() {
+gulp.task('watch', ["sass"], function() {
   gulp.watch(path.join(assetsPath, 'sass/**/*.scss'),['sass']);
 });
