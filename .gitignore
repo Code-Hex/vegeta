@@ -10,3 +10,4 @@ vendor
 *.pid
 .DS_Store
 .sass-cache
+frontend/node_modules
