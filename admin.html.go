@@ -20,7 +20,17 @@ func AdminHTML(users []*User, args Args, w io.Writer) {
   <meta name="description" content="IoTを用いた栽培中の植物のデータを管理するプロジェクトです。">
   <link href="/assets/css/main.css" rel="stylesheet">
   <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/bootstrap.css">
+  `)
+	_buffer.WriteString(`
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap4.min.css">
+  <script src="/assets/js/main.js"></script>
+`)
+
+	_buffer.WriteString(`
+  <script src="/assets/js/jquery.min.js"></script>
+  <script src="/assets/js/tether.min.js"></script>
+  <script src="/assets/js/bootstrap.min.js"></script>
   <title>`)
 	_buffer.WriteString(`admin`)
 
@@ -79,94 +89,47 @@ func AdminHTML(users []*User, args Args, w io.Writer) {
   </nav>
   `)
 	_buffer.WriteString(`
-<div class="container">
-  <div class="row">
-    <div class="col-md-10 col-md-offset-1">
-      <div class="panel panel-default panel-table">
-        <div class="panel-heading">
-          <div class="row">
-            <div class="col col-xs-6">
-              <h3 class="panel-title">ユーザーリスト</h3>
-            </div>
-            <div class="col col-xs-6 text-right">
-              <button type="button" class="btn btn-sm btn-primary btn-create">Create New</button>
-            </div>
-          </div>
-        </div>
-        <div class="panel-body">
-          <table class="table table-striped table-bordered table-list">
-            <thead>
-              <tr>
-                <th>
-                  <em class="fa fa-cog"></em>
-                </th>
-                <th class="hidden-xs">ID</th>
-                <th>Name</th>
-                <th>Admin</th>
-              </tr>
-            </thead>
-            <tbody>
-              `)
-	for _, user := range users {
-		_buffer.WriteString(`
-              <tr>
-                <td align="center">
-                  <a class="btn btn-default">
-                    <em class="fa fa-pencil"></em>
-                  </a>
-                  <a class="btn btn-danger">
-                    <em class="fa fa-trash"></em>
-                  </a>
-                </td>
-                <td class="hidden-xs">`)
-		hero.FormatUint(uint64(user.ID), _buffer)
-		_buffer.WriteString(`</td>
-                <td>`)
-		hero.EscapeHTML(user.Name, _buffer)
-		_buffer.WriteString(`</td>
-                <td>`)
-		hero.FormatBool(user.Admin, _buffer)
-		_buffer.WriteString(`</td>
-              </tr>
-              `)
-	}
-	_buffer.WriteString(`
-            </tbody>
-          </table>
-        </div>
-        <div class="panel-footer">
-          <div class="row">
-            <div class="col col-xs-4">Page 1 of 5 </div>
-            <div class="col col-xs-8">
-              <ul class="pagination hidden-xs pull-right">
-                <li>
-                  <a href="#">1</a>
-                </li>
-                <li>
-                  <a href="#">2</a>
-                </li>
-                <li>
-                  <a href="#">3</a>
-                </li>
-                <li>
-                  <a href="#">4</a>
-                </li>
-                <li>
-                  <a href="#">5</a>
-                </li>
-              </ul>
-              <ul class="pagination visible-xs pull-right">
-                <li>
-                  <a href="#">&#171;</a>
-                </li>
-                <li>
-                  <a href="#">&#187;</a>
-                </li>
-              </ul>
-            </div>
-          </div>
+<div class="content">
+  <div class="container">
+    <div class="wrapper">
+      <div class="row">
+        <div class="col col-xs-6 text-right">
+          <button type="button" class="btn btn-sm btn-primary btn-create">Create New</button>
         </div>
       </div>
+      <table id="admin" class="table table-striped table-bordered" cellspacing="0" width="100%">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Admin</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          `)
+	for _, user := range users {
+		_buffer.WriteString(`
+          <tr>
+            <td>`)
+		hero.FormatUint(uint64(user.ID), _buffer)
+		_buffer.WriteString(`</td>
+            <td>`)
+		hero.EscapeHTML(user.Name, _buffer)
+		_buffer.WriteString(`</td>
+            <td>`)
+		hero.FormatBool(user.Admin, _buffer)
+		_buffer.WriteString(`</td>
+            <td align="center">
+              <button type="button" class="btn btn-info"><i class="fa fa-pencil"></i></button>
+              <button type="button" class="btn btn-danger"><i class="fa fa-trash"></i></button>
+            </td>
+          </tr>
+          `)
+	}
+	_buffer.WriteString(`
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -177,10 +140,7 @@ func AdminHTML(users []*User, args Args, w io.Writer) {
     <p>© `)
 	hero.FormatInt(int64(args.Year()), _buffer)
 	_buffer.WriteString(` <a class="text-white" href="https://twitter.com/CodeHex">CodeHex</a></p>
-  </footer>  
-  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1" crossorigin="anonymous"></script>
+  </footer>
 </body>
 </html>`)
 	w.Write(_buffer.Bytes())

@@ -6,7 +6,6 @@ import (
 
 	"github.com/Code-Hex/saltissimo"
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/k0kubun/pp"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"go.uber.org/zap"
@@ -84,7 +83,6 @@ func Admin() echo.HandlerFunc {
 			ctx.Zap.Info("Failed to get user list", zap.Error(err))
 			return ctx.Redirect(http.StatusFound, "/mypage")
 		}
-		pp.Println(users)
 		AdminHTML(users, ctx.GetUserStatus(), c.Response())
 		return nil
 	}
