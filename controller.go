@@ -2,7 +2,6 @@ package vegeta
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/Code-Hex/saltissimo"
 	jwt "github.com/dgrijalva/jwt-go"
@@ -52,6 +51,7 @@ func (v *Vegeta) registerRoutes() {
 		}),
 	)
 	auth.GET("", MyPage())
+	auth.GET("/logout", Logout())
 	auth.GET("/settings", Settings())
 }
 
@@ -79,18 +79,18 @@ func Settings() echo.HandlerFunc {
 	}
 }
 
-func Login() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
-		return ctx.RenderTemplate("login.tt", Vars{})
-	}
-}
-
 func Logout() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
 		ctx.ExpiredCookie()
 		return ctx.Redirect(http.StatusFound, "/login")
+	}
+}
+
+func Login() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.(*Context)
+		return ctx.RenderTemplate("login.tt", Vars{})
 	}
 }
 
@@ -104,20 +104,15 @@ func Auth() echo.HandlerFunc {
 			ctx.Zap.Info("Failed to auth user", zap.String("username", username))
 			return ctx.Redirect(http.StatusFound, "/login")
 		}
-		claims := &jwtVegetaClaims{
-			Name:  user.Name,
-			Admin: false,
-			StandardClaims: jwt.StandardClaims{
-				ExpiresAt: time.Now().Add(time.Hour * 72).Unix(),
-			},
-		}
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-		t, err := token.SignedString(secret)
-		if err != nil {
-			ctx.Zap.Info("Failed to get jwt", zap.String("username", username))
+		if err := ctx.SetToken2Cookie(user); err != nil {
+			ctx.Zap.Error(
+				"Failed to set token to cookie",
+				zap.Error(err),
+				zap.String("username", username),
+			)
 			return ctx.Redirect(http.StatusFound, "/login")
 		}
-		return ctx.RedirectWithJWT(http.StatusFound, t, "/mypage")
+		return ctx.Redirect(http.StatusFound, "/mypage")
 	}
 }
 

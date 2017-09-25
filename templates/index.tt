@@ -2,7 +2,7 @@
 <header class="page-heading">
   <div class="container">
     <h1>Vegeta</h1>
-    <p>Project to collect large amounts of vegetable data using IoT.</p>
+    <p>IoTを用いた栽培中の植物のデータを管理するプロジェクトです。</p>
   </div>
 </header>
 <div class="content">

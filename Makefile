@@ -33,7 +33,7 @@ proto: proto-plugin # proto-gateway proto-swagger
 sass:
 	@cd frontend && gulp sass
 
-build: sass
+build:
 	@go generate
 	@go build $(server)
 
