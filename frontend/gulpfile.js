@@ -7,6 +7,12 @@ var assetsPath = path.resolve(pkg.path.assetsDir);
 
 var gulp = require('gulp');
 
+// browserify
+var browserify = require('gulp-browserify');
+
+// javascript minify
+var uglify = require('gulp-uglify');
+
 // sass compiler
 var sass = require('gulp-sass');
 
@@ -28,6 +34,30 @@ var minify = require('gulp-minify-css');
 
 // merge
 var merge = require('merge-stream');
+
+gulp.task('js', function() {
+  var scssStream = gulp.src('js/*.js')
+    .pipe(plumber())
+    .pipe(browserify({jquery:'jquery-browserify'}))
+    .pipe(uglify())
+    .pipe(gulp.dest(path.join(assetsPath, 'js/')));
+});
+
+gulp.task('bootstrap', function() {
+  gulp.src('node_modules/bootstrap/scss/bootstrap.scss')
+  .pipe(plumber())
+  .pipe(sass())
+  .pipe(minify())
+  .pipe(gulp.dest(path.join(assetsPath, 'css/')));
+
+  gulp.src([
+    'node_modules/bootstrap/dist/js/bootstrap.min.js',
+    'node_modules/jquery/dist/jquery.min.js',
+    'node_modules/tether/dist/js/tether.min.js'
+  ])
+  .pipe(uglify())
+  .pipe(gulp.dest(path.join(assetsPath, 'js/')));
+})
 
 gulp.task('sass', function() {
   var scssStream = gulp.src('sass/*.scss')
