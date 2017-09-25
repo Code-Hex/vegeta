@@ -9,23 +9,27 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
-	xslate "github.com/lestrrat/go-xslate"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
 type Context struct {
 	echo.Context
-	DB     *gorm.DB
-	Zap    *zap.Logger
-	Xslate *xslate.Xslate
+	DB  *gorm.DB
+	Zap *zap.Logger
 }
 
-type Vars = xslate.Vars
+type baseArg struct{ isAuthed, isAdmin bool }
 
-func CurrentYear() int {
-	return time.Now().Year()
+type Args interface {
+	IsAuthed() bool
+	IsAdmin() bool
+	Year() int
 }
+
+func (b *baseArg) IsAuthed() bool { return b.isAuthed }
+func (b *baseArg) IsAdmin() bool  { return b.isAdmin }
+func (baseArg) Year() int         { return time.Now().Year() }
 
 func (v *Vegeta) NewContext(ctx echo.Context) (*Context, error) {
 	c := &Context{
@@ -33,30 +37,11 @@ func (v *Vegeta) NewContext(ctx echo.Context) (*Context, error) {
 		DB:      v.DB,
 		Zap:     v.Logger,
 	}
-	if err := c.setupXslate(); err != nil {
-		return nil, errors.Wrap(err, "Failed to setup xslate")
-	}
 	return c, nil
 }
 
-func (c *Context) setupXslate() (err error) {
-	c.Xslate, err = xslate.New(xslate.Args{
-		"Loader": xslate.Args{
-			"LoadPaths": []string{"./templates"},
-		},
-		"Parser": xslate.Args{"Syntax": "TTerse"},
-		"Functions": xslate.Args{
-			"year": CurrentYear,
-		},
-	})
-	if err != nil {
-		return errors.Wrap(err, "Failed to construct xslate")
-	}
-	return // nil
-}
-
-func (c *Context) RenderTemplate(tmpl string, vars Vars) error {
-	var isAuthed bool
+func (c *Context) GetUserStatus() *baseArg {
+	var isAuthed, isAdmin bool
 	cookie, err := c.Cookie(keyName)
 	if err == nil && cookie.Value != "" {
 		token, err := jwt.ParseWithClaims(
@@ -71,9 +56,17 @@ func (c *Context) RenderTemplate(tmpl string, vars Vars) error {
 			},
 		)
 		isAuthed = err == nil && token.Valid
+		if isAuthed {
+			user, ok := token.Claims.(*jwtVegetaClaims)
+			if ok {
+				isAdmin = user.Admin
+			}
+		}
 	}
-	vars["isAuthed"] = isAuthed
-	return c.Xslate.RenderInto(c.Response(), tmpl, vars)
+	return &baseArg{
+		isAuthed: isAuthed,
+		isAdmin:  isAdmin,
+	}
 }
 
 const keyName = "token"

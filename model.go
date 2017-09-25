@@ -182,3 +182,13 @@ func (t *Tag) AddData(db *gorm.DB, data Data) error {
 	}
 	return nil
 }
+
+func GetUsers(db *gorm.DB, limit, offset int) ([]*User, error) {
+	next := limit * (offset - 1)
+	var users []*User
+	result := db.Limit(limit).Offset(next).Find(&users)
+	if err := result.Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}

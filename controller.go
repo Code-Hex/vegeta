@@ -2,13 +2,17 @@ package vegeta
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/Code-Hex/saltissimo"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/k0kubun/pp"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"go.uber.org/zap"
 )
+
+//go:generate hero -source=template -pkgname=vegeta -dest=.
 
 type jwtVegetaClaims struct {
 	Name  string `json:"name"`
@@ -53,29 +57,68 @@ func (v *Vegeta) registerRoutes() {
 	auth.GET("", MyPage())
 	auth.GET("/logout", Logout())
 	auth.GET("/settings", Settings())
+	// only admin
+	auth.GET("/admin", Admin())
 }
 
-func MyPage() echo.HandlerFunc {
+func Admin() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
 		token, ok := ctx.Get("user").(*jwt.Token)
 		if !ok {
-			ctx.Zap.Info("Failed to check user is authed")
+			ctx.Zap.Info("Failed to check user is admin")
 			return ctx.Redirect(http.StatusFound, "/login")
 		}
 		user := token.Claims.(*jwtVegetaClaims)
-		return ctx.RenderTemplate("index.tt", Vars{"name": user.Name})
+		if !user.Admin {
+			ctx.Zap.Info("Failed to access admin page", zap.String("username", user.Name))
+			return ctx.Redirect(http.StatusFound, "/login")
+		}
+		page := ctx.QueryParam("page")
+		p, err := strconv.Atoi(page)
+		if err != nil {
+			p = 1
+		}
+		users, err := GetUsers(ctx.DB, 20, p)
+		if err != nil {
+			ctx.Zap.Info("Failed to get user list", zap.Error(err))
+			return ctx.Redirect(http.StatusFound, "/mypage")
+		}
+		pp.Println(users)
+		AdminHTML(users, ctx.GetUserStatus(), c.Response())
+		return nil
+	}
+}
+
+func MyPage() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		/*
+			ctx := c.(*Context)
+			token, ok := ctx.Get("user").(*jwt.Token)
+			if !ok {
+				ctx.Zap.Info("Failed to check user is authed")
+				return ctx.Redirect(http.StatusFound, "/login")
+			}
+			user := token.Claims.(*jwtVegetaClaims)
+			return ctx.RenderTemplate("mypage.tt", Vars{"user": user})
+		*/
+		return nil
 	}
 }
 
 func Settings() echo.HandlerFunc {
 	return func(c echo.Context) error {
-		ctx := c.(*Context)
-		user, ok := ctx.Get("user").(*jwtVegetaClaims)
-		if !ok {
-			return ctx.RenderTemplate("index.tt", Vars{"name": ""})
-		}
-		return ctx.RenderTemplate("index.tt", Vars{"name": user.Name})
+		/*
+			ctx := c.(*Context)
+			token, ok := ctx.Get("user").(*jwt.Token)
+			if !ok {
+				ctx.Zap.Info("Failed to check user is authed")
+				return ctx.Redirect(http.StatusFound, "/login")
+			}
+			user := token.Claims.(*jwtVegetaClaims)
+			return ctx.RenderTemplate("settings.tt", Vars{"user": user})
+		*/
+		return nil
 	}
 }
 
@@ -90,7 +133,8 @@ func Logout() echo.HandlerFunc {
 func Login() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		return ctx.RenderTemplate("login.tt", Vars{})
+		LoginHTML(ctx.GetUserStatus(), ctx.Response())
+		return nil
 	}
 }
 
@@ -119,6 +163,7 @@ func Auth() echo.HandlerFunc {
 func Index() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		return ctx.RenderTemplate("index.tt", Vars{"name": ""})
+		IndexHTML(ctx.GetUserStatus(), ctx.Response())
+		return nil
 	}
 }

@@ -1,4 +1,10 @@
-[% WRAPPER 'layout/wrapper.tt' WITH title = "login" %]
+<%: func LoginHTML(args Args, w io.Writer) %>
+
+<%~ "layout/wrapper.html" %>
+
+<@% title { %>login<% } %>
+
+<%@ body { %>
 <div class="content">
   <div class="container-fluid">
     <div class="wrapper">
@@ -11,4 +17,4 @@
     </div>
   </div>
 </div>
-[% END %]
+<% } %>

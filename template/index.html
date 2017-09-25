@@ -1,0 +1,47 @@
+<%: func IndexHTML(args Args, w io.Writer) %>
+
+<%~ "layout/wrapper.html" %>
+
+<@% title { %>index<% } %>
+
+<%@ body { %>
+<header class="page-heading">
+  <div class="container">
+    <h1>Vegeta</h1>
+    <p>IoTを用いた栽培中の植物のデータを管理するプロジェクトです。</p>
+  </div>
+</header>
+<div class="content">
+  <div class="container-fluid">
+    <ul class="bullets">
+      <li class="bullet">
+        <div class="bullet-icon bullet-icon-1">
+          <span>1</span>
+        </div>
+        <div class="bullet-content">
+          <h2>ユーザーの登録</h2>
+          <p>まずはユーザー登録を行う必要があります。</p>
+          </div>
+      </li>  
+      <li class="bullet">
+        <div class="bullet-icon bullet-icon-2">
+          <span>2</span>
+        </div>
+        <div class="bullet-content">
+          <h2>インストール</h2>
+          <p>IoTデバイスにサーバーへ情報を送るためのツールをインストールします。</p>
+        </div>
+      </li>
+      <li class="bullet">
+        <div class="bullet-icon bullet-icon-3">
+          <span>3</span>
+        </div>
+        <div class="bullet-content">
+          <h2>情報を集める</h2>
+          <p>デバイスのセンサーから読み取った情報を、インストールしたツールへ渡してあげるだけで簡単にサーバへ送ってくれます。</p>
+        </div>
+      </li> 
+    </ul>
+  </div>
+</div>
+<% } %>
