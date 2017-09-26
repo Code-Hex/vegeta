@@ -91,7 +91,7 @@ func AdminHTML(users []*User, args Args, w io.Writer) {
     <div class="container-fluid">
       <div class="row">
           <div class="col col-sm-11 col-md-11 col-lg-11 text-right">
-            <button type="button" class="btn btn-md btn-primary btn-create" class="btn btn-primary" data-toggle="modal" data-target="#createModal">Create New</button>
+            <button type="button" class="btn btn-md btn-primary btn-create" class="btn btn-primary" data-toggle="modal" data-target="#createModal">ユーザー作成</button>
           </div>
         </div>
     </div>
@@ -141,8 +141,8 @@ func AdminHTML(users []*User, args Args, w io.Writer) {
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
-      <div class="modal-body">
-        <form data-toggle="validator">
+      <form id="create-user-validation">
+        <div class="modal-body">
           <div class="form-group">
             <label for="username" class="form-control-label">ユーザー名:</label>
             <input type="text" class="form-control" id="username" required>
@@ -155,18 +155,17 @@ func AdminHTML(users []*User, args Args, w io.Writer) {
             <label for="verify-password" class="form-control-label">パスワードの再確認:</label>
             <input type="password" class="form-control" id="verify-password" data-match="#password" data-match-error="Whoops, these don't match" required>
           </div>
-          <div class="form-group">
-            <label for="is-admin" class="form-control-label">
-              <input type="checkbox" class="form-control" id="is-admin">
-              管理者にする
+          <div class="form-check form-check-inline">
+            <label for="is-admin" class="form-check-label">
+                <input type="checkbox" class="form-check-input" id="is-admin"> 管理者にする
             </label>
           </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
-        <button type="button" class="btn btn-primary">ユーザーの作成</button>
-      </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
+          <button type="submit" class="btn btn-primary">ユーザーの作成</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
