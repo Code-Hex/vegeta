@@ -10,6 +10,10 @@ var gulp = require('gulp');
 // browserify
 var browserify = require('gulp-browserify');
 
+// typescript
+var ts = require('gulp-typescript');
+var tsProject = ts.createProject('tsconfig.json');
+
 // javascript minify
 var uglify = require('gulp-uglify');
 
@@ -34,6 +38,13 @@ var minify = require('gulp-minify-css');
 
 // merge
 var merge = require('merge-stream');
+
+gulp.task('ts', function() {
+  tsProject.src()
+  .pipe(tsProject())
+  .pipe(uglify())
+  .pipe(gulp.dest(path.join(assetsPath, 'js/')));
+});
 
 gulp.task('js', function() {
   var scssStream = gulp.src('js/*.js')

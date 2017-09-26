@@ -25,10 +25,12 @@
     "gulp-minify-css": "^1.2.4",
     "gulp-plumber": "^1.1.0",
     "gulp-sass": "^3.1.0",
+    "gulp-typescript": "^3.2.2",
     "gulp-uglify": "^3.0.0",
     "jquery": "^3.2.1",
     "merge-stream": "^1.0.1",
     "node-bourbon": "^4.2.8",
-    "node-neat": "^2.0.0-beta.0"
+    "node-neat": "^2.0.0-beta.0",
+    "typescript": "^2.5.2"
   }
 }
