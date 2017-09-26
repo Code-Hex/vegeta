@@ -21,122 +21,159 @@ func AdminHTML(users []*User, args Args, w io.Writer) {
   <link href="/assets/css/main.css" rel="stylesheet">
   <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
   <link rel="stylesheet" href="/assets/css/bootstrap.css">
+  <script src="/assets/js/jquery.min.js"></script>
+  <script src="/assets/js/tether.min.js"></script>
+  <script src="/assets/js/bootstrap.min.js"></script>
   `)
 	_buffer.WriteString(`
   <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap4.min.css">
   <script src="/assets/js/main.js"></script>
+  <script src="/assets/js/admin.js"></script>
 `)
 
 	_buffer.WriteString(`
-  <script src="/assets/js/jquery.min.js"></script>
-  <script src="/assets/js/tether.min.js"></script>
-  <script src="/assets/js/bootstrap.min.js"></script>
   <title>`)
 	_buffer.WriteString(`admin`)
 
 	_buffer.WriteString(`</title>
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-light static-top v-navbar">
-    <div class="container">
-      <div class="navbar-header">
-        <a class="navbar-brand" href="/">Vegeta</a>
-        <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
-          <i class="fa fa-bars"></i>
-        </button>
-      </div>
-      <div id="navbarResponsive" class="collapse navbar-collapse">
-        <ul class="navbar-nav mr-auto">
-          <li class="nav-item"><a class="nav-link" href="/contact">問い合わせ</a></li>
-        </ul>
-        <ul class="navbar-nav">
-          `)
+  <nav class="navbar navbar-toggleable-md navbar-expand-lg navbar-light static-top v-navbar">
+    <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fa fa-bars"></i>
+    </button>
+    <a class="navbar-brand" href="/">Vegeta</a>
+    <div id="navbarResponsive" class="collapse navbar-collapse">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item"><a class="nav-link" href="/contact">問い合わせ</a></li>
+      </ul>
+      <ul class="navbar-nav">
+        `)
 	if args.IsAuthed() {
 		_buffer.WriteString(`
-            <li class="nav-item dropdown show">
-              <a class="nav-link dropdown-toggle dropdown-toggle-split" href="" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-user" aria-hidden="true"></i> ユーザー</a>
-              <div class="dropdown-menu">
-                <a class="dropdown-item" href="/mypage"><i class="fa fa-pagelines" aria-hidden="true"></i> 観察</a>
-                <div class="dropdown-divider"></div>
-                `)
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle dropdown-toggle-split" href="" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-user" aria-hidden="true"></i> ユーザー</a>
+            <div class="dropdown-menu">
+              <a class="dropdown-item" href="/mypage"><i class="fa fa-pagelines" aria-hidden="true"></i> 観察</a>
+              <div class="dropdown-divider"></div>
+              `)
 		if args.IsAdmin() {
 			_buffer.WriteString(`
-                  <a class="dropdown-item" href="/mypage/admin"><i class="fa fa-lock" aria-hidden="true"></i> ユーザー管理パネル</a>
-                `)
+                <a class="dropdown-item" href="/mypage/admin"><i class="fa fa-lock" aria-hidden="true"></i> ユーザー管理パネル</a>
+              `)
 		} else {
 			_buffer.WriteString(`
-                  <a class="dropdown-item" href="/mypage/settings"><i class="fa fa-cog" aria-hidden="true"></i> 設定</a>
-                `)
+                <a class="dropdown-item" href="/mypage/settings"><i class="fa fa-cog" aria-hidden="true"></i> 設定</a>
+              `)
 		}
 		_buffer.WriteString(`
-              </div>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/mypage/logout"><i class="fa fa-sign-out" aria-hidden="true"></i> ログアウト</a>
-            </li>
-          `)
+            </div>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/mypage/logout"><i class="fa fa-sign-out" aria-hidden="true"></i> ログアウト</a>
+          </li>
+        `)
 	} else {
 		_buffer.WriteString(`
-            <li class="nav-item">
-              <a class="nav-link" href="/login"><i class="fa fa-sign-in" aria-hidden="true"></i> ログイン</a>
-            </li>
-          `)
+          <li class="nav-item">
+            <a class="nav-link" href="/login"><i class="fa fa-sign-in" aria-hidden="true"></i> ログイン</a>
+          </li>
+        `)
 	}
 	_buffer.WriteString(`
-        </ul>
-      </div>
+      </ul>
     </div>
   </nav>
   `)
 	_buffer.WriteString(`
 <div class="content">
-  <div class="container">
-    <div class="wrapper">
+  <div class="admin-wrapper">
+    <div class="container-fluid">
       <div class="row">
-        <div class="col col-xs-6 text-right">
-          <button type="button" class="btn btn-sm btn-primary btn-create">Create New</button>
+          <div class="col col-sm-11 col-md-11 col-lg-11 text-right">
+            <button type="button" class="btn btn-md btn-primary btn-create" class="btn btn-primary" data-toggle="modal" data-target="#createModal">Create New</button>
+          </div>
         </div>
-      </div>
-      <table id="admin" class="table table-striped table-bordered" cellspacing="0" width="100%">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Username</th>
-            <th>Admin</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          `)
+    </div>
+  </div>
+  <div class="container">
+    <table id="admin" class="table table-striped table-bordered" cellspacing="0" width="100%">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>ユーザー名</th>
+          <th>管理者</th>
+          <th>アクション</th>
+        </tr>
+      </thead>
+      <tbody>
+        `)
 	for _, user := range users {
 		_buffer.WriteString(`
-          <tr>
-            <td>`)
+        <tr>
+          <td>`)
 		hero.FormatUint(uint64(user.ID), _buffer)
 		_buffer.WriteString(`</td>
-            <td>`)
+          <td>`)
 		hero.EscapeHTML(user.Name, _buffer)
 		_buffer.WriteString(`</td>
-            <td>`)
+          <td>`)
 		hero.FormatBool(user.Admin, _buffer)
 		_buffer.WriteString(`</td>
-            <td align="center">
-              <button type="button" class="btn btn-info"><i class="fa fa-pencil"></i></button>
-              <button type="button" class="btn btn-danger"><i class="fa fa-trash"></i></button>
-            </td>
-          </tr>
-          `)
+          <td align="center">
+            <button type="button" class="btn btn-info"><i class="fa fa-pencil"></i></button>
+            <button type="button" class="btn btn-danger"><i class="fa fa-trash"></i></button>
+          </td>
+        </tr>
+        `)
 	}
 	_buffer.WriteString(`
-        </tbody>
-      </table>
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="modal fade" id="createModal" tabindex="-1" role="dialog" aria-labelledby="createModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createModalLabel">新しいユーザーの作成</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form data-toggle="validator">
+          <div class="form-group">
+            <label for="username" class="form-control-label">ユーザー名:</label>
+            <input type="text" class="form-control" id="username" required>
+          </div>
+          <div class="form-group">
+            <label for="password" class="form-control-label">パスワード:</label>
+            <input type="password" class="form-control" id="password" required>
+          </div>
+          <div class="form-group">
+            <label for="verify-password" class="form-control-label">パスワードの再確認:</label>
+            <input type="password" class="form-control" id="verify-password" data-match="#password" data-match-error="Whoops, these don't match" required>
+          </div>
+          <div class="form-group">
+            <label for="is-admin" class="form-control-label">
+              <input type="checkbox" class="form-control" id="is-admin">
+              管理者にする
+            </label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
+        <button type="button" class="btn btn-primary">ユーザーの作成</button>
+      </div>
     </div>
   </div>
 </div>
 `)
 
 	_buffer.WriteString(`
-  <footer class="footer" role="contentinfo">
+  <footer class="footer">
     <p>© `)
 	hero.FormatInt(int64(args.Year()), _buffer)
 	_buffer.WriteString(` <a class="text-white" href="https://twitter.com/CodeHex">CodeHex</a></p>

@@ -7,6 +7,7 @@
 <%@ head { %>
   <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap4.min.css">
   <script src="/assets/js/main.js"></script>
+  <script src="/assets/js/admin.js"></script>
 <% } %>
 
 <%@ body { %>
@@ -15,7 +16,7 @@
     <div class="container-fluid">
       <div class="row">
           <div class="col col-sm-11 col-md-11 col-lg-11 text-right">
-            <button type="button" class="btn btn-md btn-primary btn-create">Create New</button>
+            <button type="button" class="btn btn-md btn-primary btn-create" class="btn btn-primary" data-toggle="modal" data-target="#createModal">Create New</button>
           </div>
         </div>
     </div>
@@ -25,9 +26,9 @@
       <thead>
         <tr>
           <th>ID</th>
-          <th>Username</th>
-          <th>Admin</th>
-          <th>Actions</th>
+          <th>ユーザー名</th>
+          <th>管理者</th>
+          <th>アクション</th>
         </tr>
       </thead>
       <tbody>
@@ -44,6 +45,44 @@
         <% } %>
       </tbody>
     </table>
+  </div>
+</div>
+<div class="modal fade" id="createModal" tabindex="-1" role="dialog" aria-labelledby="createModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createModalLabel">新しいユーザーの作成</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form data-toggle="validator">
+          <div class="form-group">
+            <label for="username" class="form-control-label">ユーザー名:</label>
+            <input type="text" class="form-control" id="username" required>
+          </div>
+          <div class="form-group">
+            <label for="password" class="form-control-label">パスワード:</label>
+            <input type="password" class="form-control" id="password" required>
+          </div>
+          <div class="form-group">
+            <label for="verify-password" class="form-control-label">パスワードの再確認:</label>
+            <input type="password" class="form-control" id="verify-password" data-match="#password" data-match-error="Whoops, these don't match" required>
+          </div>
+          <div class="form-group">
+            <label for="is-admin" class="form-control-label">
+              <input type="checkbox" class="form-control" id="is-admin">
+              管理者にする
+            </label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
+        <button type="button" class="btn btn-primary">ユーザーの作成</button>
+      </div>
+    </div>
   </div>
 </div>
 <% } %>

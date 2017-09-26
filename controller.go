@@ -40,6 +40,9 @@ func (v *Vegeta) registerRoutes() {
 			return func(c echo.Context) error {
 				err := next(c)
 				if err != nil {
+					if herr, ok := err.(*echo.HTTPError); ok && herr.Code == 404 {
+						return err
+					}
 					v.Error("Error via restricted group", zap.Error(err))
 					return c.Redirect(http.StatusFound, "/login")
 				}
@@ -56,23 +59,33 @@ func (v *Vegeta) registerRoutes() {
 	auth.GET("", MyPage())
 	auth.GET("/logout", Logout())
 	auth.GET("/settings", Settings())
+
 	// only admin
-	auth.GET("/admin", Admin())
+	admin := auth.Group("/admin")
+	admin.Use(
+		func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(c echo.Context) error {
+				token, ok := c.Get("user").(*jwt.Token)
+				if !ok {
+					v.Info("Failed to check user is admin")
+					return c.Redirect(http.StatusFound, "/login")
+				}
+				user := token.Claims.(*jwtVegetaClaims)
+				if !user.Admin {
+					v.Info("Failed to access admin page", zap.String("username", user.Name))
+					return c.Redirect(http.StatusFound, "/login")
+				}
+				return next(c)
+			}
+		},
+	)
+	admin.GET("", Admin())
+	//admin.GET("", CreateUser())
 }
 
 func Admin() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		token, ok := ctx.Get("user").(*jwt.Token)
-		if !ok {
-			ctx.Zap.Info("Failed to check user is admin")
-			return ctx.Redirect(http.StatusFound, "/login")
-		}
-		user := token.Claims.(*jwtVegetaClaims)
-		if !user.Admin {
-			ctx.Zap.Info("Failed to access admin page", zap.String("username", user.Name))
-			return ctx.Redirect(http.StatusFound, "/login")
-		}
 		page := ctx.QueryParam("page")
 		p, err := strconv.Atoi(page)
 		if err != nil {
@@ -88,6 +101,25 @@ func Admin() echo.HandlerFunc {
 	}
 }
 
+/*
+func CreateUser() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.(*Context)
+		page := ctx.QueryParam("page")
+		p, err := strconv.Atoi(page)
+		if err != nil {
+			p = 1
+		}
+		users, err := GetUsers(ctx.DB, 20, p)
+		if err != nil {
+			ctx.Zap.Info("Failed to get user list", zap.Error(err))
+			return ctx.Redirect(http.StatusFound, "/mypage")
+		}
+		AdminHTML(users, ctx.GetUserStatus(), c.Response())
+		return nil
+	}
+}
+*/
 func MyPage() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		/*
@@ -131,6 +163,10 @@ func Logout() echo.HandlerFunc {
 func Login() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
+		arg := ctx.GetUserStatus()
+		if arg.isAuthed {
+			return ctx.Redirect(http.StatusFound, "/mypage")
+		}
 		LoginHTML(ctx.GetUserStatus(), ctx.Response())
 		return nil
 	}

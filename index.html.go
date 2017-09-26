@@ -21,63 +21,59 @@ func IndexHTML(args Args, w io.Writer) {
   <link href="/assets/css/main.css" rel="stylesheet">
   <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
   <link rel="stylesheet" href="/assets/css/bootstrap.css">
-  `)
-	_buffer.WriteString(`
   <script src="/assets/js/jquery.min.js"></script>
   <script src="/assets/js/tether.min.js"></script>
   <script src="/assets/js/bootstrap.min.js"></script>
+  `)
+	_buffer.WriteString(`
   <title>`)
 	_buffer.WriteString(`</title>
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-light static-top v-navbar">
-    <div class="container">
-      <div class="navbar-header">
-        <a class="navbar-brand" href="/">Vegeta</a>
-        <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
-          <i class="fa fa-bars"></i>
-        </button>
-      </div>
-      <div id="navbarResponsive" class="collapse navbar-collapse">
-        <ul class="navbar-nav mr-auto">
-          <li class="nav-item"><a class="nav-link" href="/contact">問い合わせ</a></li>
-        </ul>
-        <ul class="navbar-nav">
-          `)
+  <nav class="navbar navbar-toggleable-md navbar-expand-lg navbar-light static-top v-navbar">
+    <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fa fa-bars"></i>
+    </button>
+    <a class="navbar-brand" href="/">Vegeta</a>
+    <div id="navbarResponsive" class="collapse navbar-collapse">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item"><a class="nav-link" href="/contact">問い合わせ</a></li>
+      </ul>
+      <ul class="navbar-nav">
+        `)
 	if args.IsAuthed() {
 		_buffer.WriteString(`
-            <li class="nav-item dropdown show">
-              <a class="nav-link dropdown-toggle dropdown-toggle-split" href="" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-user" aria-hidden="true"></i> ユーザー</a>
-              <div class="dropdown-menu">
-                <a class="dropdown-item" href="/mypage"><i class="fa fa-pagelines" aria-hidden="true"></i> 観察</a>
-                <div class="dropdown-divider"></div>
-                `)
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle dropdown-toggle-split" href="" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-user" aria-hidden="true"></i> ユーザー</a>
+            <div class="dropdown-menu">
+              <a class="dropdown-item" href="/mypage"><i class="fa fa-pagelines" aria-hidden="true"></i> 観察</a>
+              <div class="dropdown-divider"></div>
+              `)
 		if args.IsAdmin() {
 			_buffer.WriteString(`
-                  <a class="dropdown-item" href="/mypage/admin"><i class="fa fa-lock" aria-hidden="true"></i> ユーザー管理パネル</a>
-                `)
+                <a class="dropdown-item" href="/mypage/admin"><i class="fa fa-lock" aria-hidden="true"></i> ユーザー管理パネル</a>
+              `)
 		} else {
 			_buffer.WriteString(`
-                  <a class="dropdown-item" href="/mypage/settings"><i class="fa fa-cog" aria-hidden="true"></i> 設定</a>
-                `)
+                <a class="dropdown-item" href="/mypage/settings"><i class="fa fa-cog" aria-hidden="true"></i> 設定</a>
+              `)
 		}
 		_buffer.WriteString(`
-              </div>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/mypage/logout"><i class="fa fa-sign-out" aria-hidden="true"></i> ログアウト</a>
-            </li>
-          `)
+            </div>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/mypage/logout"><i class="fa fa-sign-out" aria-hidden="true"></i> ログアウト</a>
+          </li>
+        `)
 	} else {
 		_buffer.WriteString(`
-            <li class="nav-item">
-              <a class="nav-link" href="/login"><i class="fa fa-sign-in" aria-hidden="true"></i> ログイン</a>
-            </li>
-          `)
+          <li class="nav-item">
+            <a class="nav-link" href="/login"><i class="fa fa-sign-in" aria-hidden="true"></i> ログイン</a>
+          </li>
+        `)
 	}
 	_buffer.WriteString(`
-        </ul>
-      </div>
+      </ul>
     </div>
   </nav>
   `)
@@ -124,7 +120,7 @@ func IndexHTML(args Args, w io.Writer) {
 `)
 
 	_buffer.WriteString(`
-  <footer class="footer" role="contentinfo">
+  <footer class="footer">
     <p>© `)
 	hero.FormatInt(int64(args.Year()), _buffer)
 	_buffer.WriteString(` <a class="text-white" href="https://twitter.com/CodeHex">CodeHex</a></p>
