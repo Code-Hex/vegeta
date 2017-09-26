@@ -11,37 +11,39 @@
 
 <%@ body { %>
 <div class="content">
-  <div class="container">
-    <div class="wrapper">
+  <div class="admin-wrapper">
+    <div class="container-fluid">
       <div class="row">
-        <div class="col col-xs-6 text-right">
-          <button type="button" class="btn btn-sm btn-primary btn-create">Create New</button>
+          <div class="col col-sm-11 col-md-11 col-lg-11 text-right">
+            <button type="button" class="btn btn-md btn-primary btn-create">Create New</button>
+          </div>
         </div>
-      </div>
-      <table id="admin" class="table table-striped table-bordered" cellspacing="0" width="100%">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Username</th>
-            <th>Admin</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% for _, user := range users { %>
-          <tr>
-            <td><%==u user.ID %></td>
-            <td><%= user.Name %></td>
-            <td><%==b user.Admin %></td>
-            <td align="center">
-              <button type="button" class="btn btn-info"><i class="fa fa-pencil"></i></button>
-              <button type="button" class="btn btn-danger"><i class="fa fa-trash"></i></button>
-            </td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
     </div>
+  </div>
+  <div class="container">
+    <table id="admin" class="table table-striped table-bordered" cellspacing="0" width="100%">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Admin</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% for _, user := range users { %>
+        <tr>
+          <td><%==u user.ID %></td>
+          <td><%= user.Name %></td>
+          <td><%==b user.Admin %></td>
+          <td align="center">
+            <button type="button" class="btn btn-info"><i class="fa fa-pencil"></i></button>
+            <button type="button" class="btn btn-danger"><i class="fa fa-trash"></i></button>
+          </td>
+        </tr>
+        <% } %>
+      </tbody>
+    </table>
   </div>
 </div>
 <% } %>
