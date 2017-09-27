@@ -42,6 +42,7 @@ var merge = require('merge-stream');
 gulp.task('ts', function() {
   tsProject.src()
   .pipe(tsProject())
+  .pipe(browserify({jquery:'jquery-browserify'}))
   .pipe(uglify())
   .pipe(gulp.dest(path.join(assetsPath, 'js/')));
 });

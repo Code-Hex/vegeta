@@ -16,6 +16,7 @@
   "license": "GPL-3.0",
   "devDependencies": {
     "@types/jquery": "^3.2.12",
+    "@types/promise": "^7.1.30",
     "bootstrap": "^4.0.0-alpha.6",
     "browserify": "^14.4.0",
     "datatables.net-bs4": "^1.10.16",
@@ -32,6 +33,10 @@
     "merge-stream": "^1.0.1",
     "node-bourbon": "^4.2.8",
     "node-neat": "^2.0.0-beta.0",
+    "superagent": "^3.6.0",
     "typescript": "^2.5.2"
+  },
+  "dependencies": {
+    "@types/superagent": "^3.5.5"
   }
 }
