@@ -29,7 +29,7 @@ func IndexHTML(args Args, w io.Writer) {
   <title>`)
 	_buffer.WriteString(`</title>
 </head>
-<body>
+<body class="d-flex flex-column" style="min-height: 100vh">
   <nav class="navbar navbar-toggleable-md navbar-expand-lg navbar-light static-top v-navbar">
     <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
       <i class="fa fa-bars"></i>
@@ -76,7 +76,8 @@ func IndexHTML(args Args, w io.Writer) {
       </ul>
     </div>
   </nav>
-  `)
+  <main class="mb-auto">
+    `)
 	_buffer.WriteString(`
 <header class="page-heading">
   <div class="container">
@@ -120,11 +121,14 @@ func IndexHTML(args Args, w io.Writer) {
 `)
 
 	_buffer.WriteString(`
+  </main>
   <footer class="footer">
     <p>© `)
 	hero.FormatInt(int64(args.Year()), _buffer)
 	_buffer.WriteString(` <a class="text-white" href="https://twitter.com/CodeHex">CodeHex</a></p>
   </footer>
+  `)
+	_buffer.WriteString(`
 </body>
 </html>`)
 	w.Write(_buffer.Bytes())

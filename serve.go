@@ -14,6 +14,7 @@ import (
 	static "github.com/Code-Hex/echo-static"
 	"github.com/Code-Hex/vegeta/protos"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
+	validator "gopkg.in/go-playground/validator.v9"
 
 	"github.com/jinzhu/gorm"
 	"google.golang.org/grpc"
@@ -40,6 +41,14 @@ type Vegeta struct {
 	DB         *gorm.DB
 	GRPC       *grpc.Server
 	waitSignal chan os.Signal
+}
+
+type Validator struct {
+	validator *validator.Validate
+}
+
+func (v *Validator) Validate(i interface{}) error {
+	return v.validator.Struct(i)
 }
 
 func New() *Vegeta {
@@ -211,6 +220,7 @@ func (v *Vegeta) setupHandlers() error {
 	}
 
 	// Add route for echo
+	v.Validator = &Validator{validator: validator.New()}
 	v.registerRoutes()
 
 	return nil

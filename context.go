@@ -73,6 +73,22 @@ const keyName = "token"
 
 var expiredAt = time.Now()
 
+func (c *Context) CreateAPIToken(username string) (string, error) {
+	tm := time.Now().Add(time.Hour * 24)
+	claims := &apiVegetaClaims{
+		Name: username,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: tm.Unix(),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	t, err := token.SignedString(secret)
+	if err != nil {
+		return "", errors.New("Failed to get api jwt")
+	}
+	return t, nil
+}
+
 func (c *Context) SetToken2Cookie(user *User) error {
 	tm := time.Now().Add(time.Hour * 24)
 	claims := &jwtVegetaClaims{

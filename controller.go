@@ -1,17 +1,23 @@
 package vegeta
 
 import (
+	"crypto/subtle"
 	"net/http"
-	"strconv"
 
 	"github.com/Code-Hex/saltissimo"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/k0kubun/pp"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"go.uber.org/zap"
 )
 
 //go:generate hero -source=template -pkgname=vegeta -dest=.
+
+type apiVegetaClaims struct {
+	Name string `json:"name"`
+	jwt.StandardClaims
+}
 
 type jwtVegetaClaims struct {
 	Name  string `json:"name"`
@@ -29,10 +35,26 @@ func init() {
 	}
 }
 
+type resultJSON struct {
+	IsSuccess bool   `json:"is_success"`
+	Reason    string `json:"reason"`
+}
+
 func (v *Vegeta) registerRoutes() {
 	v.GET("/", Index())
 	v.GET("/login", Login())
 	v.POST("/auth", Auth())
+
+	api := v.Group("/api")
+	api.Use(
+		middleware.JWTWithConfig(middleware.JWTConfig{
+			Claims:      &apiVegetaClaims{},
+			SigningKey:  secret,
+			TokenLookup: "header:Authorization",
+			ContextKey:  "token",
+		}),
+	)
+	api.POST("/create", JSONCreateUser())
 
 	auth := v.Group("/mypage")
 	auth.Use(
@@ -75,51 +97,93 @@ func (v *Vegeta) registerRoutes() {
 					v.Info("Failed to access admin page", zap.String("username", user.Name))
 					return c.Redirect(http.StatusFound, "/login")
 				}
+				c.Set("username", user.Name)
 				return next(c)
 			}
 		},
 	)
 	admin.GET("", Admin())
-	//admin.GET("", CreateUser())
+}
+
+type adminArgs struct {
+	*baseArg
+	token        string
+	users        []*User
+	isCreated    bool
+	failedReason string
 }
 
 func Admin() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		page := ctx.QueryParam("page")
-		p, err := strconv.Atoi(page)
-		if err != nil {
-			p = 1
-		}
-		users, err := GetUsers(ctx.DB, 20, p)
+		users, err := GetUsers(ctx.DB)
 		if err != nil {
 			ctx.Zap.Info("Failed to get user list", zap.Error(err))
 			return ctx.Redirect(http.StatusFound, "/mypage")
 		}
-		AdminHTML(users, ctx.GetUserStatus(), c.Response())
+		token, err := ctx.CreateAPIToken(ctx.Get("username").(string))
+		if err != nil {
+			ctx.Zap.Info("Failed to create api token", zap.Error(err))
+			return ctx.Redirect(http.StatusFound, "/mypage")
+		}
+		args := &adminArgs{
+			baseArg: ctx.GetUserStatus(),
+			token:   token,
+			users:   users,
+		}
+		AdminHTML(args, c.Response())
 		return nil
 	}
 }
 
-/*
-func CreateUser() echo.HandlerFunc {
+type createUser struct {
+	Name           string `json:"name" validate:"required"`
+	Password       string `json:"password" validate:"required"`
+	VerifyPassword string `json:"verify_password" validate:"required"`
+	IsAdmin        bool   `json:"is_admin"`
+}
+
+func JSONCreateUser() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		page := ctx.QueryParam("page")
-		p, err := strconv.Atoi(page)
-		if err != nil {
-			p = 1
+		createUser := new(createUser)
+		if err := c.Bind(createUser); err != nil {
+			pp.Println(err)
+			ctx.Zap.Error("Failed to bind from form", zap.Error(err))
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "フォーム内容を取得できませんでした: " + err.Error(),
+			})
 		}
-		users, err := GetUsers(ctx.DB, 20, p)
-		if err != nil {
-			ctx.Zap.Info("Failed to get user list", zap.Error(err))
-			return ctx.Redirect(http.StatusFound, "/mypage")
+		if err := c.Validate(createUser); err != nil {
+			pp.Println(err)
+			ctx.Zap.Error("Failed to validate form", zap.Error(err))
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "入力に誤りがあります: " + err.Error(),
+			})
 		}
-		AdminHTML(users, ctx.GetUserStatus(), c.Response())
-		return nil
+
+		password := createUser.Password
+		verifyPassword := createUser.VerifyPassword
+		if subtle.ConstantTimeCompare([]byte(password), []byte(verifyPassword)) != 1 {
+			ctx.Zap.Error("Invalid password")
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "入力したパスワードと確認用のパスワードが一致しませんでした。",
+			})
+		}
+		username := createUser.Name
+		isAdmin := createUser.IsAdmin
+		if _, err := CreateUser(ctx.DB, username, password, isAdmin); err != nil {
+			ctx.Zap.Error("Failed to create user", zap.Error(err))
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "ユーザー作成時にエラーが発生しました。",
+			})
+		}
+		return ctx.JSON(http.StatusOK, &resultJSON{
+			IsSuccess: true,
+		})
 	}
 }
-*/
+
 func MyPage() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		/*

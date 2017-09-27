@@ -35,7 +35,7 @@ type Data struct {
 	Payload    string `gorm:"not null" sql:"type:text;"`
 }
 
-func CreateUser(db *gorm.DB, name, password string) (*User, error) {
+func CreateUser(db *gorm.DB, name, password string, isAdmin bool) (*User, error) {
 	user := &User{}
 	if user.AlreadyExist(db, name) {
 		return nil, errors.New("User " + name + " already exist")
@@ -48,6 +48,7 @@ func CreateUser(db *gorm.DB, name, password string) (*User, error) {
 	user.Password = hashed
 	user.Salt = key
 	user.Token = utils.GenerateUUID()
+	user.Admin = isAdmin
 	if err := db.Create(user).Error; err != nil {
 		return nil, err
 	}
@@ -183,10 +184,9 @@ func (t *Tag) AddData(db *gorm.DB, data Data) error {
 	return nil
 }
 
-func GetUsers(db *gorm.DB, limit, offset int) ([]*User, error) {
-	next := limit * (offset - 1)
+func GetUsers(db *gorm.DB) ([]*User, error) {
 	var users []*User
-	result := db.Limit(limit).Offset(next).Find(&users)
+	result := db.Find(&users)
 	if err := result.Error; err != nil {
 		return nil, err
 	}

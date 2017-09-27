@@ -9,7 +9,7 @@ import (
 	"github.com/shiyanhui/hero"
 )
 
-func AdminHTML(users []*User, args Args, w io.Writer) {
+func AdminHTML(args Args, w io.Writer) {
 	_buffer := hero.GetBuffer()
 	defer hero.PutBuffer(_buffer)
 	_buffer.WriteString(`<!DOCTYPE html>
@@ -28,7 +28,6 @@ func AdminHTML(users []*User, args Args, w io.Writer) {
 	_buffer.WriteString(`
   <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap4.min.css">
   <script src="/assets/js/main.js"></script>
-  <script src="/assets/js/admin.js"></script>
 `)
 
 	_buffer.WriteString(`
@@ -37,7 +36,7 @@ func AdminHTML(users []*User, args Args, w io.Writer) {
 
 	_buffer.WriteString(`</title>
 </head>
-<body>
+<body class="d-flex flex-column" style="min-height: 100vh">
   <nav class="navbar navbar-toggleable-md navbar-expand-lg navbar-light static-top v-navbar">
     <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
       <i class="fa fa-bars"></i>
@@ -84,8 +83,13 @@ func AdminHTML(users []*User, args Args, w io.Writer) {
       </ul>
     </div>
   </nav>
-  `)
+  <main class="mb-auto">
+    `)
+	adminArgs := args.(*adminArgs)
 	_buffer.WriteString(`
+<input type="hidden" id="api-token" value="`)
+	hero.EscapeHTML(adminArgs.token, _buffer)
+	_buffer.WriteString(`">
 <div class="content">
   <div class="admin-wrapper">
     <div class="container-fluid">
@@ -108,7 +112,7 @@ func AdminHTML(users []*User, args Args, w io.Writer) {
       </thead>
       <tbody>
         `)
-	for _, user := range users {
+	for _, user := range adminArgs.users {
 		_buffer.WriteString(`
         <tr>
           <td>`)
@@ -131,52 +135,59 @@ func AdminHTML(users []*User, args Args, w io.Writer) {
       </tbody>
     </table>
   </div>
-</div>
-<div class="modal fade" id="createModal" tabindex="-1" role="dialog" aria-labelledby="createModalLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="createModalLabel">新しいユーザーの作成</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
+  <div class="modal fade" id="createModal" tabindex="-1" role="dialog" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="createModalLabel">新しいユーザーの作成</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <form id="create-user-validation">
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="username" class="form-control-label">ユーザー名:</label>
+              <input type="text" name="username" class="form-control" id="username" required>
+            </div>
+            <div class="form-group">
+              <label for="password" class="form-control-label">パスワード:</label>
+              <input type="password" name="password" class="form-control" id="password" required>
+            </div>
+            <div class="form-group">
+              <label for="verify-password" class="form-control-label">パスワードの再確認:</label>
+              <input type="password" name="verify-password" class="form-control" id="verify-password" data-match="#password" data-match-error="Whoops, these don't match" required>
+            </div>
+            <div class="form-check form-check-inline">
+              <label for="is-admin" class="form-check-label">
+                  <input type="checkbox" name="is-admin" class="form-check-input" id="is-admin"> 管理者にする
+              </label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
+            <button type="submit" id="create" class="btn btn-primary">ユーザーの作成</button>
+          </div>
+        </form>
       </div>
-      <form id="create-user-validation">
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="username" class="form-control-label">ユーザー名:</label>
-            <input type="text" class="form-control" id="username" required>
-          </div>
-          <div class="form-group">
-            <label for="password" class="form-control-label">パスワード:</label>
-            <input type="password" class="form-control" id="password" required>
-          </div>
-          <div class="form-group">
-            <label for="verify-password" class="form-control-label">パスワードの再確認:</label>
-            <input type="password" class="form-control" id="verify-password" data-match="#password" data-match-error="Whoops, these don't match" required>
-          </div>
-          <div class="form-check form-check-inline">
-            <label for="is-admin" class="form-check-label">
-                <input type="checkbox" class="form-check-input" id="is-admin"> 管理者にする
-            </label>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
-          <button type="submit" class="btn btn-primary">ユーザーの作成</button>
-        </div>
-      </form>
     </div>
   </div>
 </div>
 `)
 
 	_buffer.WriteString(`
+  </main>
   <footer class="footer">
     <p>© `)
 	hero.FormatInt(int64(args.Year()), _buffer)
 	_buffer.WriteString(` <a class="text-white" href="https://twitter.com/CodeHex">CodeHex</a></p>
   </footer>
+  `)
+	_buffer.WriteString(`
+  <script src="/assets/js/admin.js"></script>
+`)
+
+	_buffer.WriteString(`
 </body>
 </html>`)
 	w.Write(_buffer.Bytes())

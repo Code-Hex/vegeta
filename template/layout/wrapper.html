@@ -13,7 +13,7 @@
   <%@ head { %><% } %>
   <title><%@ title { %><% } %></title>
 </head>
-<body>
+<body class="d-flex flex-column" style="min-height: 100vh">
   <nav class="navbar navbar-toggleable-md navbar-expand-lg navbar-light static-top v-navbar">
     <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
       <i class="fa fa-bars"></i>
@@ -48,9 +48,12 @@
       </ul>
     </div>
   </nav>
-  <%@ body { %><% } %>
+  <main class="mb-auto">
+    <%@ body { %><% } %>
+  </main>
   <footer class="footer">
     <p>© <%==i args.Year() %> <a class="text-white" href="https://twitter.com/CodeHex">CodeHex</a></p>
   </footer>
+  <%@ foot { %><% } %>
 </body>
 </html>
