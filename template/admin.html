@@ -34,8 +34,8 @@
       </thead>
       <tbody>
         <% for _, user := range adminArgs.users { %>
-        <tr>
           <% if user.ID > 1 { %>
+          <tr>
             <td><%==u user.ID %></td>
             <td><%= user.Name %></td>
             <td><%==b user.Admin %></td>
@@ -43,8 +43,8 @@
               <button type="button" class="btn btn-info" data-toggle="modal" data-target="#editModal" data-id="<%==u user.ID %>" data-name="<%= user.Name %>" data-is-admin="<%==b user.Admin %>"><i class="fa fa-pencil"></i></button>
               <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" data-id="<%==u user.ID %>" data-name="<%= user.Name %>"><i class="fa fa-trash"></i></button>
             </td>
+          </tr>
           <% } %>
-        </tr>
         <% } %>
       </tbody>
     </table>

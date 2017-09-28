@@ -113,11 +113,9 @@ func AdminHTML(args Args, w io.Writer) {
       <tbody>
         `)
 	for _, user := range adminArgs.users {
-		_buffer.WriteString(`
-        <tr>
-          `)
 		if user.ID > 1 {
 			_buffer.WriteString(`
+          <tr>
             <td>`)
 			hero.FormatUint(uint64(user.ID), _buffer)
 			_buffer.WriteString(`</td>
@@ -141,11 +139,9 @@ func AdminHTML(args Args, w io.Writer) {
 			hero.EscapeHTML(user.Name, _buffer)
 			_buffer.WriteString(`"><i class="fa fa-trash"></i></button>
             </td>
+          </tr>
           `)
 		}
-		_buffer.WriteString(`
-        </tr>
-        `)
 	}
 	_buffer.WriteString(`
       </tbody>
