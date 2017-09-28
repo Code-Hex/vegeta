@@ -26,8 +26,7 @@ func MyPageHTML(args Args, w io.Writer) {
   <script src="/assets/js/bootstrap.min.js"></script>
   `)
 	_buffer.WriteString(`
-  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap4.min.css">
-  <script src="/assets/js/main.js"></script>
+  <link rel="stylesheet" type="text/css" href="/assets/css/c3.min.css">
 `)
 
 	_buffer.WriteString(`
@@ -85,6 +84,28 @@ func MyPageHTML(args Args, w io.Writer) {
   </nav>
   <main class="mb-auto">
     `)
+	_buffer.WriteString(`
+<div class="content row">
+  <div class="col-xs col-md-3" id="tags">
+    <nav class="sidebar-nav">
+      <ul class="nav nav-pills flex-column">
+        <li class="navbar-brand sidebar-brand">タグ一覧</li>
+        <li class="nav-item"><a href="#">Home</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="col-xs-9 col-md-9" id="page-content-wrapper">
+    <div class="container">
+      <h1>Simple Sidebar</h1>
+      <p>This template has a responsive menu toggling system. The menu will appear collapsed on smaller screens, and will appear non-collapsed on larger screens. When toggled using the button below, the menu will appear/disappear. On small screens, the page content will be pushed off canvas.</p>
+      <p>Make sure to keep all page content within the 
+        <code>#page-content-wrapper</code>.
+      </p>
+      <a href="#menu-toggle" class="btn btn-secondary" id="menu-toggle">Toggle Menu</a>
+    </div>
+  </div>
+</div>
+`)
 
 	_buffer.WriteString(`
   </main>
@@ -95,7 +116,7 @@ func MyPageHTML(args Args, w io.Writer) {
   </footer>
   `)
 	_buffer.WriteString(`
-  <script src="/assets/js/admin.js"></script>
+  <script src="/assets/js/mypage.js"></script>
 `)
 
 	_buffer.WriteString(`

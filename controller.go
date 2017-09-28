@@ -33,19 +33,6 @@ func (v *Vegeta) registerRoutes() {
 	v.GET("/login", Login())
 	v.POST("/auth", Auth())
 
-	api := v.Group("/api")
-	api.Use(
-		middleware.JWTWithConfig(middleware.JWTConfig{
-			Claims:      &apiVegetaClaims{},
-			SigningKey:  secret,
-			TokenLookup: "header:Authorization",
-			ContextKey:  "token",
-		}),
-	)
-	api.POST("/create", JSONCreateUser())
-	api.POST("/edit", JSONEditUser())
-	api.POST("/delete", JSONDeleteUser())
-
 	auth := v.Group("/mypage")
 	auth.Use(
 		func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -94,6 +81,19 @@ func (v *Vegeta) registerRoutes() {
 		},
 	)
 	admin.GET("", Admin())
+
+	api := admin.Group("/api")
+	api.Use(
+		middleware.JWTWithConfig(middleware.JWTConfig{
+			Claims:      &apiVegetaClaims{},
+			SigningKey:  secret,
+			TokenLookup: "header:Authorization",
+			ContextKey:  "token",
+		}),
+	)
+	api.POST("/create", JSONCreateUser())
+	api.POST("/edit", JSONEditUser())
+	api.POST("/delete", JSONDeleteUser())
 }
 
 type adminArgs struct {

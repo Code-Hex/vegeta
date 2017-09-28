@@ -15,10 +15,13 @@
   "author": "CodeHex",
   "license": "GPL-3.0",
   "devDependencies": {
+    "@types/c3": "^0.4.44",
+    "@types/datatables.net": "^1.10.6",
     "@types/jquery": "^3.2.12",
     "@types/promise": "^7.1.30",
     "bootstrap": "^4.0.0-alpha.6",
     "browserify": "^14.4.0",
+    "c3": "^0.4.18",
     "datatables.net-bs4": "^1.10.16",
     "gulp": "^3.9.1",
     "gulp-autoprefixer": "^4.0.0",

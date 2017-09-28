@@ -1,4 +1,4 @@
-import * as request from 'superagent';
+import * as request from 'superagent'
 
 class Validator {
     public static CheckPassword(): void {
@@ -25,7 +25,7 @@ class Actions {
 
     public DeleteUser(parent: JQuery<HTMLElement>): void {
         let id = parent.find("#user-id").val()
-        request.post('/api/delete')
+        request.post('/mypage/admin/api/delete')
         .set('Content-Type', 'application/json')
         .set('Authorization', `Bearer ${ this._token }`)
         .send({ id: id })
@@ -48,7 +48,7 @@ class Actions {
     public EditUser(parent: JQuery<HTMLElement>): void {
         let id = parent.find("#user-id").val()
         let is_admin: boolean = parent.find('#is-admin').is(':checked')
-        request.post('/api/edit')
+        request.post('/mypage/admin/api/edit')
             .set('Content-Type', 'application/json')
             .set('Authorization', `Bearer ${ this._token }`)
             .send({
@@ -78,7 +78,7 @@ class Actions {
         let verify_password = parent.find("#verify-password").val()
         let is_admin: boolean = parent.find('#is-admin').is(':checked')
         console.log(is_admin)
-        request.post('/api/create')
+        request.post('/mypage/admin/api/create')
             .set('Content-Type', 'application/json')
             .set('Authorization', `Bearer ${ this._token }`)
             .send({

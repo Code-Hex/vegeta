@@ -45,7 +45,7 @@ gulp.task('ts', function() {
   .pipe(browserify({jquery:'jquery-browserify'}))
   .pipe(uglify())
   .pipe(gulp.dest(path.join(assetsPath, 'js/')));
-});
+})
 
 gulp.task('js', function() {
   var scssStream = gulp.src('js/*.js')
@@ -53,7 +53,13 @@ gulp.task('js', function() {
     .pipe(browserify({jquery:'jquery-browserify'}))
     .pipe(uglify())
     .pipe(gulp.dest(path.join(assetsPath, 'js/')));
-});
+})
+
+gulp.task('c3', function() {
+  gulp.src('node_modules/c3/c3.min.css')
+  .pipe(plumber())
+  .pipe(gulp.dest(path.join(assetsPath, 'css/')));
+})
 
 gulp.task('bootstrap', function() {
   gulp.src('node_modules/bootstrap/scss/bootstrap.scss')
@@ -87,10 +93,10 @@ gulp.task('sass', function() {
     .pipe(concat('main.css'))
     .pipe(minify())
     .pipe(gulp.dest(path.join(assetsPath, 'css/')));
-});
+})
 
 // If you run `gulp` command, it is monioring sass files.
 // Invoke auto compile after sass files are changed.
 gulp.task('watch', ["sass"], function() {
   gulp.watch('sass/*.scss', ['sass']);
-});
+})
