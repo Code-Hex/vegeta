@@ -70,6 +70,7 @@ func (v *Vegeta) registerRoutes() {
 	)
 	auth.GET("", MyPage())
 	auth.GET("/logout", Logout())
+	auth.GET("/mypage", MyPage())
 	auth.GET("/settings", Settings())
 
 	// only admin
@@ -128,32 +129,16 @@ func Admin() echo.HandlerFunc {
 
 func MyPage() echo.HandlerFunc {
 	return func(c echo.Context) error {
-		/*
-			ctx := c.(*Context)
-			token, ok := ctx.Get("user").(*jwt.Token)
-			if !ok {
-				ctx.Zap.Info("Failed to check user is authed")
-				return ctx.Redirect(http.StatusFound, "/login")
-			}
-			user := token.Claims.(*jwtVegetaClaims)
-			return ctx.RenderTemplate("mypage.tt", Vars{"user": user})
-		*/
+		ctx := c.(*Context)
+		MyPageHTML(ctx.GetUserStatus(), ctx.Response())
 		return nil
 	}
 }
 
 func Settings() echo.HandlerFunc {
 	return func(c echo.Context) error {
-		/*
-			ctx := c.(*Context)
-			token, ok := ctx.Get("user").(*jwt.Token)
-			if !ok {
-				ctx.Zap.Info("Failed to check user is authed")
-				return ctx.Redirect(http.StatusFound, "/login")
-			}
-			user := token.Claims.(*jwtVegetaClaims)
-			return ctx.RenderTemplate("settings.tt", Vars{"user": user})
-		*/
+		ctx := c.(*Context)
+		SettingsHTML(ctx.GetUserStatus(), ctx.Response())
 		return nil
 	}
 }
@@ -173,7 +158,7 @@ func Login() echo.HandlerFunc {
 		if arg.isAuthed {
 			return ctx.Redirect(http.StatusFound, "/mypage")
 		}
-		LoginHTML(ctx.GetUserStatus(), ctx.Response())
+		LoginHTML(arg, ctx.Response())
 		return nil
 	}
 }
