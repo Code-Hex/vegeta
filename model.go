@@ -55,6 +55,30 @@ func CreateUser(db *gorm.DB, name, password string, isAdmin bool) (*User, error)
 	return user, nil
 }
 
+func EditUser(db *gorm.DB, userID string, isAdmin bool) (*User, error) {
+	user := &User{}
+	if db.First(user, userID).RecordNotFound() {
+		return nil, errors.Errorf("UserID: %s is not found", userID)
+	}
+	user.Admin = isAdmin
+	if err := db.Save(user).Error; err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func ReGenerateUserToken(db *gorm.DB, userID string) (*User, error) {
+	user := &User{}
+	if db.First(user, userID).RecordNotFound() {
+		return nil, errors.Errorf("UserID: %s is not found", userID)
+	}
+	user.Token = utils.GenerateUUID()
+	if err := db.Save(user).Error; err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 func TokenAuth(db *gorm.DB, uuid string) (*User, error) {
 	user := new(User)
 	result := db.First(user, "token = ?", uuid)

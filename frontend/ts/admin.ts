@@ -23,11 +23,37 @@ class Actions {
         return this._token
     }
     
-    public CreateUser(): void {
-        let username = $("#username").val()
-        let password = $("#password").val()
-        let verify_password = $("#verify-password").val()
-        let is_admin: boolean = $('#is-admin').is(':checked')
+    public EditUser(parent: JQuery<HTMLElement>): void {
+        let id = parent.find("#user-id").val()
+        let is_admin: boolean = parent.find('#is-admin').is(':checked')
+        request.post('/api/edit')
+            .set('Content-Type', 'application/json')
+            .set('Authorization', `Bearer ${ this._token }`)
+            .send({
+                id: id,
+                is_admin: is_admin
+            })    
+            .end(function(err, res){
+                if (err || !res.ok) {
+                    alert('http error: ' + err);
+                } else {
+                    let json = res.body
+                    if (json.is_success) {
+                        alert('ユーザーを編集しました。')
+                        window.location.reload(true)
+                    } else {
+                        alert(`ユーザーの編集に失敗しました: ${ json.reason }`);
+                    }
+                }
+            })
+
+    }
+
+    public CreateUser(parent: JQuery<HTMLElement>): void {
+        let username = parent.find("#username").val()
+        let password = parent.find("#password").val()
+        let verify_password = parent.find("#verify-password").val()
+        let is_admin: boolean = parent.find('#is-admin').is(':checked')
         console.log(is_admin)
         request.post('/api/create')
             .set('Content-Type', 'application/json')
@@ -67,11 +93,30 @@ $(document).ready(function() {
     })
 })
 
+$('#editModal').on('show.bs.modal', function (e) {
+    let button = $(<HTMLElement>e.relatedTarget)
+    let id = button.data('id')
+    let name = button.data('name')
+    let is_admin = button.data('is-admin')
+    console.log(is_admin)
+    let modal = $(this)
+    modal.find('#username').val(name)
+    modal.find('#user-id').val(id)
+    modal.find('#is-admin').prop('checked', is_admin)
+})
+
 var actions = new Actions()
+
 var createElem = <HTMLInputElement>document.getElementById('create-user-validation')
 createElem.addEventListener('submit', (e) => {
     e.preventDefault()
-    console.log("executed")
-    actions.CreateUser()    
+    actions.CreateUser($("#create-user-validation"))
+    console.log(actions.token)
+})
+
+var editElem = <HTMLInputElement>document.getElementById('edit-user-validation')
+editElem.addEventListener('submit', (e) => {
+    e.preventDefault()
+    actions.EditUser($("#edit-user-validation"))
     console.log(actions.token)
 })

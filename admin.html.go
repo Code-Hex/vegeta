@@ -125,8 +125,20 @@ func AdminHTML(args Args, w io.Writer) {
 		hero.FormatBool(user.Admin, _buffer)
 		_buffer.WriteString(`</td>
           <td align="center">
-            <button type="button" class="btn btn-info"><i class="fa fa-pencil"></i></button>
-            <button type="button" class="btn btn-danger"><i class="fa fa-trash"></i></button>
+            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#editModal" data-id="`)
+		hero.FormatUint(uint64(user.ID), _buffer)
+		_buffer.WriteString(`" data-name="`)
+		hero.EscapeHTML(user.Name, _buffer)
+		_buffer.WriteString(`" data-is-admin="`)
+		hero.FormatBool(user.Admin, _buffer)
+		_buffer.WriteString(`"><i class="fa fa-pencil"></i></button>
+            <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" data-id="`)
+		hero.FormatUint(uint64(user.ID), _buffer)
+		_buffer.WriteString(`" data-name="`)
+		hero.EscapeHTML(user.Name, _buffer)
+		_buffer.WriteString(`" data-is-admin="`)
+		hero.FormatBool(user.Admin, _buffer)
+		_buffer.WriteString(`"><i class="fa fa-trash"></i></button>
           </td>
         </tr>
         `)
@@ -167,6 +179,36 @@ func AdminHTML(args Args, w io.Writer) {
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
             <button type="submit" id="create" class="btn btn-primary">ユーザーの作成</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editModalLabel">ユーザーの編集</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <form id="edit-user-validation">
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="username" class="form-control-label">ユーザー名:</label>
+              <input type="text" class="form-control" id="username" readonly="readonly">
+              <input type="hidden" class="form-control" id="user-id">
+            </div>
+            <div class="form-check form-check-inline">
+              <label for="is-admin" class="form-check-label">
+                  <input type="checkbox" name="is-admin" class="form-check-input" id="is-admin"> 管理者にする
+              </label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
+            <button type="submit" id="edit" class="btn btn-primary">編集を完了する</button>
           </div>
         </form>
       </div>

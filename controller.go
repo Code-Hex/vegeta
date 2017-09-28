@@ -1,23 +1,16 @@
 package vegeta
 
 import (
-	"crypto/subtle"
 	"net/http"
 
 	"github.com/Code-Hex/saltissimo"
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/k0kubun/pp"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"go.uber.org/zap"
 )
 
 //go:generate hero -source=template -pkgname=vegeta -dest=.
-
-type apiVegetaClaims struct {
-	Name string `json:"name"`
-	jwt.StandardClaims
-}
 
 type jwtVegetaClaims struct {
 	Name  string `json:"name"`
@@ -35,11 +28,6 @@ func init() {
 	}
 }
 
-type resultJSON struct {
-	IsSuccess bool   `json:"is_success"`
-	Reason    string `json:"reason"`
-}
-
 func (v *Vegeta) registerRoutes() {
 	v.GET("/", Index())
 	v.GET("/login", Login())
@@ -55,7 +43,7 @@ func (v *Vegeta) registerRoutes() {
 		}),
 	)
 	api.POST("/create", JSONCreateUser())
-
+	api.POST("/edit", JSONEditUser())
 	auth := v.Group("/mypage")
 	auth.Use(
 		func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -133,54 +121,6 @@ func Admin() echo.HandlerFunc {
 		}
 		AdminHTML(args, c.Response())
 		return nil
-	}
-}
-
-type createUser struct {
-	Name           string `json:"name" validate:"required"`
-	Password       string `json:"password" validate:"required"`
-	VerifyPassword string `json:"verify_password" validate:"required"`
-	IsAdmin        bool   `json:"is_admin"`
-}
-
-func JSONCreateUser() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
-		createUser := new(createUser)
-		if err := c.Bind(createUser); err != nil {
-			pp.Println(err)
-			ctx.Zap.Error("Failed to bind from form", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: "フォーム内容を取得できませんでした: " + err.Error(),
-			})
-		}
-		if err := c.Validate(createUser); err != nil {
-			pp.Println(err)
-			ctx.Zap.Error("Failed to validate form", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: "入力に誤りがあります: " + err.Error(),
-			})
-		}
-
-		password := createUser.Password
-		verifyPassword := createUser.VerifyPassword
-		if subtle.ConstantTimeCompare([]byte(password), []byte(verifyPassword)) != 1 {
-			ctx.Zap.Error("Invalid password")
-			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: "入力したパスワードと確認用のパスワードが一致しませんでした。",
-			})
-		}
-		username := createUser.Name
-		isAdmin := createUser.IsAdmin
-		if _, err := CreateUser(ctx.DB, username, password, isAdmin); err != nil {
-			ctx.Zap.Error("Failed to create user", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: "ユーザー作成時にエラーが発生しました。",
-			})
-		}
-		return ctx.JSON(http.StatusOK, &resultJSON{
-			IsSuccess: true,
-		})
 	}
 }
 
