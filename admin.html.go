@@ -115,31 +115,35 @@ func AdminHTML(args Args, w io.Writer) {
 	for _, user := range adminArgs.users {
 		_buffer.WriteString(`
         <tr>
-          <td>`)
-		hero.FormatUint(uint64(user.ID), _buffer)
-		_buffer.WriteString(`</td>
-          <td>`)
-		hero.EscapeHTML(user.Name, _buffer)
-		_buffer.WriteString(`</td>
-          <td>`)
-		hero.FormatBool(user.Admin, _buffer)
-		_buffer.WriteString(`</td>
-          <td align="center">
-            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#editModal" data-id="`)
-		hero.FormatUint(uint64(user.ID), _buffer)
-		_buffer.WriteString(`" data-name="`)
-		hero.EscapeHTML(user.Name, _buffer)
-		_buffer.WriteString(`" data-is-admin="`)
-		hero.FormatBool(user.Admin, _buffer)
-		_buffer.WriteString(`"><i class="fa fa-pencil"></i></button>
-            <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" data-id="`)
-		hero.FormatUint(uint64(user.ID), _buffer)
-		_buffer.WriteString(`" data-name="`)
-		hero.EscapeHTML(user.Name, _buffer)
-		_buffer.WriteString(`" data-is-admin="`)
-		hero.FormatBool(user.Admin, _buffer)
-		_buffer.WriteString(`"><i class="fa fa-trash"></i></button>
-          </td>
+          `)
+		if user.ID > 1 {
+			_buffer.WriteString(`
+            <td>`)
+			hero.FormatUint(uint64(user.ID), _buffer)
+			_buffer.WriteString(`</td>
+            <td>`)
+			hero.EscapeHTML(user.Name, _buffer)
+			_buffer.WriteString(`</td>
+            <td>`)
+			hero.FormatBool(user.Admin, _buffer)
+			_buffer.WriteString(`</td>
+            <td align="center">
+              <button type="button" class="btn btn-info" data-toggle="modal" data-target="#editModal" data-id="`)
+			hero.FormatUint(uint64(user.ID), _buffer)
+			_buffer.WriteString(`" data-name="`)
+			hero.EscapeHTML(user.Name, _buffer)
+			_buffer.WriteString(`" data-is-admin="`)
+			hero.FormatBool(user.Admin, _buffer)
+			_buffer.WriteString(`"><i class="fa fa-pencil"></i></button>
+              <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" data-id="`)
+			hero.FormatUint(uint64(user.ID), _buffer)
+			_buffer.WriteString(`" data-name="`)
+			hero.EscapeHTML(user.Name, _buffer)
+			_buffer.WriteString(`"><i class="fa fa-trash"></i></button>
+            </td>
+          `)
+		}
+		_buffer.WriteString(`
         </tr>
         `)
 	}
@@ -214,6 +218,31 @@ func AdminHTML(args Args, w io.Writer) {
       </div>
     </div>
   </div>
+  <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="deleteModalLabel">ユーザーの削除</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <form id="delete-user-validation">
+            <div class="modal-body">
+              <div class="form-group">
+                <label for="username" class="form-control-label">ユーザー名:</label>
+                <input type="text" class="form-control" id="username" readonly="readonly">
+                <input type="hidden" class="form-control" id="user-id">
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
+              <button type="submit" id="delete" class="btn btn-danger">削除する</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
 </div>
 `)
 

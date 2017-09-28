@@ -22,6 +22,28 @@ class Actions {
     public get token(): string {
         return this._token
     }
+
+    public DeleteUser(parent: JQuery<HTMLElement>): void {
+        let id = parent.find("#user-id").val()
+        request.post('/api/delete')
+        .set('Content-Type', 'application/json')
+        .set('Authorization', `Bearer ${ this._token }`)
+        .send({ id: id })
+        .end(function(err, res){
+            if (err || !res.ok) {
+                alert('http error: ' + err);
+            } else {
+                let json = res.body
+                if (json.is_success) {
+                    alert('ユーザーを削除しました。')
+                    window.location.reload(true)
+                } else {
+                    alert(`ユーザーの削除に失敗しました: ${ json.reason }`)
+                    window.location.reload(true)
+                }
+            }
+        })
+    }
     
     public EditUser(parent: JQuery<HTMLElement>): void {
         let id = parent.find("#user-id").val()
@@ -42,7 +64,8 @@ class Actions {
                         alert('ユーザーを編集しました。')
                         window.location.reload(true)
                     } else {
-                        alert(`ユーザーの編集に失敗しました: ${ json.reason }`);
+                        alert(`ユーザーの編集に失敗しました: ${ json.reason }`)
+                        window.location.reload(true)
                     }
                 }
             })
@@ -73,7 +96,8 @@ class Actions {
                         alert('ユーザーを作成しました。')
                         window.location.reload(true)
                     } else {
-                        alert(`ユーザーの作成に失敗しました: ${ json.reason }`);
+                        alert(`ユーザーの作成に失敗しました: ${ json.reason }`)
+                        window.location.reload(true)
                     }
                 }
             })
@@ -105,6 +129,15 @@ $('#editModal').on('show.bs.modal', function (e) {
     modal.find('#is-admin').prop('checked', is_admin)
 })
 
+$('#deleteModal').on('show.bs.modal', function (e) {
+    let button = $(<HTMLElement>e.relatedTarget)
+    let id = button.data('id')
+    let name = button.data('name')
+    let modal = $(this)
+    modal.find('#username').val(name)
+    modal.find('#user-id').val(id)
+})
+
 var actions = new Actions()
 
 var createElem = <HTMLInputElement>document.getElementById('create-user-validation')
@@ -118,5 +151,12 @@ var editElem = <HTMLInputElement>document.getElementById('edit-user-validation')
 editElem.addEventListener('submit', (e) => {
     e.preventDefault()
     actions.EditUser($("#edit-user-validation"))
+    console.log(actions.token)
+})
+
+var deleteElem = <HTMLInputElement>document.getElementById('delete-user-validation')
+deleteElem.addEventListener('submit', (e) => {
+    e.preventDefault()
+    actions.DeleteUser($("#delete-user-validation"))
     console.log(actions.token)
 })

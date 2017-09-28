@@ -44,6 +44,8 @@ func (v *Vegeta) registerRoutes() {
 	)
 	api.POST("/create", JSONCreateUser())
 	api.POST("/edit", JSONEditUser())
+	api.POST("/delete", JSONDeleteUser())
+
 	auth := v.Group("/mypage")
 	auth.Use(
 		func(next echo.HandlerFunc) echo.HandlerFunc {

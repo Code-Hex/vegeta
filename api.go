@@ -135,3 +135,37 @@ func JSONEditUser() echo.HandlerFunc {
 		})
 	}
 }
+
+type deleteUser struct {
+	ID string `json:"id" validate:"required"`
+}
+
+func JSONDeleteUser() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.(*Context)
+		deleteUser := new(deleteUser)
+		if err := c.Bind(deleteUser); err != nil {
+			ctx.Zap.Error("Failed to bind from json", zap.Error(err))
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "リクエスト内容を取得できませんでした: " + err.Error(),
+			})
+		}
+		if err := c.Validate(deleteUser); err != nil {
+			ctx.Zap.Error("Failed to validate json", zap.Error(err))
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "入力に誤りがあります: " + err.Error(),
+			})
+		}
+
+		userID := deleteUser.ID
+		if _, err := DeleteUser(ctx.DB, userID); err != nil {
+			ctx.Zap.Error("Failed to delete user", zap.Error(err))
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "ユーザー削除時にエラーが発生しました。",
+			})
+		}
+		return ctx.JSON(http.StatusOK, &resultJSON{
+			IsSuccess: true,
+		})
+	}
+}

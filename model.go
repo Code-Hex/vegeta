@@ -2,6 +2,7 @@ package vegeta
 
 import (
 	"crypto/sha256"
+	"strconv"
 	"unicode"
 
 	"github.com/Code-Hex/saltissimo"
@@ -56,9 +57,16 @@ func CreateUser(db *gorm.DB, name, password string, isAdmin bool) (*User, error)
 }
 
 func EditUser(db *gorm.DB, userID string, isAdmin bool) (*User, error) {
+	id, err := strconv.ParseInt(userID, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to validate user-id")
+	}
+	if id == 1 {
+		return nil, errors.New("Can not edit UserID: 1")
+	}
 	user := &User{}
-	if db.First(user, userID).RecordNotFound() {
-		return nil, errors.Errorf("UserID: %s is not found", userID)
+	if db.First(user, id).RecordNotFound() {
+		return nil, errors.Errorf("UserID: %d is not found", id)
 	}
 	user.Admin = isAdmin
 	if err := db.Save(user).Error; err != nil {
@@ -67,10 +75,32 @@ func EditUser(db *gorm.DB, userID string, isAdmin bool) (*User, error) {
 	return user, nil
 }
 
-func ReGenerateUserToken(db *gorm.DB, userID string) (*User, error) {
+func DeleteUser(db *gorm.DB, userID string) (*User, error) {
+	id, err := strconv.ParseInt(userID, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to validate user-id")
+	}
+	if id == 1 {
+		return nil, errors.New("Can not delete UserID: 1")
+	}
 	user := &User{}
-	if db.First(user, userID).RecordNotFound() {
-		return nil, errors.Errorf("UserID: %s is not found", userID)
+	if db.First(user, id).RecordNotFound() {
+		return nil, errors.Errorf("UserID: %d is not found", id)
+	}
+	if err := db.Delete(user).Error; err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func ReGenerateUserToken(db *gorm.DB, userID string) (*User, error) {
+	id, err := strconv.ParseInt(userID, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to validate user-id")
+	}
+	user := &User{}
+	if db.First(user, id).RecordNotFound() {
+		return nil, errors.Errorf("UserID: %d is not found", id)
 	}
 	user.Token = utils.GenerateUUID()
 	if err := db.Save(user).Error; err != nil {
