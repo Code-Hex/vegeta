@@ -9,12 +9,18 @@
 <% } %>
 
 <%@ body { %>
+<% 
+  mypageArgs := args.(*mypageArgs)
+  user := mypageArgs.user
+%>
 <div class="content row">
   <div class="col-xs col-md-3" id="tags">
     <nav class="sidebar-nav">
       <ul class="nav nav-pills flex-column">
         <li class="navbar-brand sidebar-brand">タグ一覧</li>
-        <li class="nav-item"><a href="#">Home</a></li>
+        <% for _, tag := range user.Tags { %>
+        <li class="nav-item" id="<%==u tag.ID %>"><a href=""><%= tag.Name %></a></li>
+        <% } %>
       </ul>
     </nav>
   </div>

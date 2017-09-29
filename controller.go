@@ -127,10 +127,30 @@ func Admin() echo.HandlerFunc {
 	}
 }
 
+type mypageArgs struct {
+	*baseArg
+	user *User
+}
+
 func MyPage() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		MyPageHTML(ctx.GetUserStatus(), ctx.Response())
+		token, ok := c.Get("user").(*jwt.Token)
+		if !ok {
+			ctx.Zap.Info("Failed to check user is auth")
+			return c.Redirect(http.StatusFound, "/login")
+		}
+		claim := token.Claims.(*jwtVegetaClaims)
+		user, err := FindUserByName(ctx.DB, claim.Name)
+		if err != nil {
+			ctx.Zap.Info("Failed to get user via mypage")
+			return c.Redirect(http.StatusFound, "/login")
+		}
+		args := &mypageArgs{
+			baseArg: ctx.GetUserStatus(),
+			user:    user,
+		}
+		MyPageHTML(args, ctx.Response())
 		return nil
 	}
 }

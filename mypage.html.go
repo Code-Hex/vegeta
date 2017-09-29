@@ -84,13 +84,27 @@ func MyPageHTML(args Args, w io.Writer) {
   </nav>
   <main class="mb-auto">
     `)
+
+	mypageArgs := args.(*mypageArgs)
+	user := mypageArgs.user
+
 	_buffer.WriteString(`
 <div class="content row">
   <div class="col-xs col-md-3" id="tags">
     <nav class="sidebar-nav">
       <ul class="nav nav-pills flex-column">
         <li class="navbar-brand sidebar-brand">タグ一覧</li>
-        <li class="nav-item"><a href="#">Home</a></li>
+        `)
+	for _, tag := range user.Tags {
+		_buffer.WriteString(`
+        <li class="nav-item" id="`)
+		hero.FormatUint(uint64(tag.ID), _buffer)
+		_buffer.WriteString(`"><a href="">`)
+		hero.EscapeHTML(tag.Name, _buffer)
+		_buffer.WriteString(`</a></li>
+        `)
+	}
+	_buffer.WriteString(`
       </ul>
     </nav>
   </div>

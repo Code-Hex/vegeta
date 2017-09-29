@@ -36,6 +36,8 @@ type Data struct {
 	Payload    string `gorm:"not null" sql:"type:text;"`
 }
 
+// Completed modeles
+
 func CreateUser(db *gorm.DB, name, password string, isAdmin bool) (*User, error) {
 	user := &User{}
 	if user.AlreadyExist(db, name) {
