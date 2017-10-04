@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"net/http"
+	"strconv"
 
 	"github.com/Code-Hex/vegeta/model"
 	"github.com/Code-Hex/vegeta/protos"
@@ -56,10 +57,46 @@ type resultJSON struct {
 	Reason    string `json:"reason"`
 }
 
+type getTagsData struct {
+	TagID string `json:"tag_id" validate:"required"`
+}
+
+type resultGetTagsJSON struct {
+	Data []model.Data
+}
+
 func JSONTagsData() echo.HandlerFunc {
 	return func(c echo.Context) error {
+		ctx := c.(*Context)
+		param := new(getTagsData)
+		if err := ctx.BindValidate(param); err != nil {
+			return err
+		}
+		i, err := strconv.Atoi(param.TagID)
+		if err != nil {
+			ctx.Zap.Info(
+				"Failed to convert string to int",
+				zap.Error(err),
+			)
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "タグが存在しませんでした",
+			})
+		}
+		tagID := uint(i)
+		tag, err := model.FindTagByID(ctx.DB, tagID)
+		if err != nil {
+			ctx.Zap.Info("Failed to get tag",
+				zap.Error(err),
+				zap.Uint("tag_id", tagID),
+			)
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "タグが存在しませんでした",
+			})
+		}
 
-		return nil
+		return ctx.JSON(http.StatusOK, &resultGetTagsJSON{
+			Data: tag.SomeData,
+		})
 	}
 }
 
@@ -73,20 +110,20 @@ type createUser struct {
 func JSONCreateUser() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		createUser := new(createUser)
-		if err := ctx.BindValidate(createUser); err != nil {
+		param := new(createUser)
+		if err := ctx.BindValidate(param); err != nil {
 			return err
 		}
 
-		password := createUser.Password
-		verifyPassword := createUser.VerifyPassword
+		password := param.Password
+		verifyPassword := param.VerifyPassword
 		if subtle.ConstantTimeCompare([]byte(password), []byte(verifyPassword)) != 1 {
 			return ctx.JSON(http.StatusOK, &resultJSON{
 				Reason: "入力したパスワードと確認用のパスワードが一致しませんでした。",
 			})
 		}
-		username := createUser.Name
-		isAdmin := createUser.IsAdmin
+		username := param.Name
+		isAdmin := param.IsAdmin
 		if _, err := model.CreateUser(ctx.DB, username, password, isAdmin); err != nil {
 			ctx.Zap.Error("Failed to create user", zap.Error(err))
 			return ctx.JSON(http.StatusOK, &resultJSON{

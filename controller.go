@@ -70,7 +70,7 @@ func (v *Vegeta) registerRoutes() {
 			ContextKey:  "auth_api",
 		}),
 	)
-	authAPI.GET("/", JSONTagsData())
+	authAPI.GET("/data", JSONTagsData())
 
 	// only admin
 	admin := auth.Group("/admin")
@@ -146,9 +146,11 @@ func Admin() echo.HandlerFunc {
 
 type mypageArgs struct {
 	html.Args
-	user *model.User
+	user  *model.User
+	token string
 }
 
+func (m *mypageArgs) Token() string     { return m.token }
 func (m *mypageArgs) User() *model.User { return m.user }
 
 func MyPage() echo.HandlerFunc {
@@ -156,7 +158,7 @@ func MyPage() echo.HandlerFunc {
 		ctx := c.(*Context)
 		token, ok := c.Get("user").(*jwt.Token)
 		if !ok {
-			ctx.Zap.Info("Failed to check user is auth")
+			ctx.Zap.Info("Failed to check user has a permission")
 			return c.Redirect(http.StatusFound, "/login")
 		}
 		claim := token.Claims.(*jwtVegetaClaims)
@@ -165,9 +167,15 @@ func MyPage() echo.HandlerFunc {
 			ctx.Zap.Info("Failed to get user via mypage")
 			return c.Redirect(http.StatusFound, "/login")
 		}
+		t, err := ctx.CreateAPIToken(user.Name)
+		if err != nil {
+			ctx.Zap.Info("Failed to create api token at mypage", zap.Error(err))
+			return c.Redirect(http.StatusFound, "/login")
+		}
 		args := &mypageArgs{
-			Args: ctx.GetUserStatus(),
-			user: user,
+			Args:  ctx.GetUserStatus(),
+			user:  user,
+			token: t,
 		}
 		html.MyPage(args, ctx.Response())
 		return nil

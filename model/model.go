@@ -33,11 +33,11 @@ type Tag struct {
 }
 
 type Data struct {
-	gorm.Model
-	TagID      uint   `gorm:"not null"`
-	RemoteAddr string `gorm:"not null"`
-	Hostname   string `gorm:"not null"`
-	Payload    string `gorm:"not null" sql:"type:text;"`
+	gorm.Model `json:",omitempty"`
+	TagID      uint   `json:",omitempty" gorm:"not null"`
+	RemoteAddr string `json:"remote_addr" gorm:"not null"`
+	Hostname   string `json:"hostname" gorm:"not null"`
+	Payload    string `json:"payload" gorm:"not null" sql:"type:text;"`
 }
 
 // Completed modeles

@@ -13,6 +13,7 @@
   mypageArgs := args
   user := mypageArgs.User()
 %>
+<input type="hidden" id="api-token" value="<%= mypageArgs.Token() %>">
 <div class="content row">
   <div class="col-xs col-md-2" id="tags">
     <nav class="sidebar-nav">

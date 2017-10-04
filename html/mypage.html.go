@@ -89,6 +89,9 @@ func MyPage(args MyPageArgs, w io.Writer) {
 	user := mypageArgs.User()
 
 	_buffer.WriteString(`
+<input type="hidden" id="api-token" value="`)
+	hero.EscapeHTML(mypageArgs.Token(), _buffer)
+	_buffer.WriteString(`">
 <div class="content row">
   <div class="col-xs col-md-2" id="tags">
     <nav class="sidebar-nav">

@@ -22,5 +22,6 @@ type (
 	MyPageArgs interface {
 		Args
 		User() *model.User
+		Token() string
 	}
 )
