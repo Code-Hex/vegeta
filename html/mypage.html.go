@@ -100,9 +100,9 @@ func MyPage(args MyPageArgs, w io.Writer) {
         `)
 	for _, tag := range user.Tags {
 		_buffer.WriteString(`
-        <li class="nav-item" id="`)
+        <li class="nav-item"><a href="javascript:void(0)" class="action" name="`)
 		hero.FormatUint(uint64(tag.ID), _buffer)
-		_buffer.WriteString(`"><a href="">`)
+		_buffer.WriteString(`">`)
 		hero.EscapeHTML(tag.Name, _buffer)
 		_buffer.WriteString(`</a></li>
         `)

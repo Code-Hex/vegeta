@@ -70,7 +70,7 @@ func (v *Vegeta) registerRoutes() {
 			ContextKey:  "auth_api",
 		}),
 	)
-	authAPI.GET("/data", JSONTagsData())
+	authAPI.POST("/data", JSONTagsData())
 
 	// only admin
 	admin := auth.Group("/admin")

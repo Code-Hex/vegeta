@@ -3,6 +3,7 @@ package model
 import (
 	"crypto/sha256"
 	"strconv"
+	"time"
 	"unicode"
 
 	"github.com/Code-Hex/saltissimo"
@@ -33,8 +34,12 @@ type Tag struct {
 }
 
 type Data struct {
-	gorm.Model `json:",omitempty"`
-	TagID      uint   `json:",omitempty" gorm:"not null"`
+	ID        uint       `json:"-" gorm:"primary_key"`
+	CreatedAt time.Time  `json:"-"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"-" sql:"index"`
+
+	TagID      uint   `json:"-" gorm:"not null"`
 	RemoteAddr string `json:"remote_addr" gorm:"not null"`
 	Hostname   string `json:"hostname" gorm:"not null"`
 	Payload    string `json:"payload" gorm:"not null" sql:"type:text;"`

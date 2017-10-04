@@ -20,7 +20,7 @@
       <ul class="nav nav-pills flex-column">
         <li class="navbar-brand sidebar-brand">タグ一覧</li>
         <% for _, tag := range user.Tags { %>
-        <li class="nav-item" id="<%==u tag.ID %>"><a href=""><%= tag.Name %></a></li>
+        <li class="nav-item"><a href="javascript:void(0)" class="action" name="<%==u tag.ID %>"><%= tag.Name %></a></li>
         <% } %>
       </ul>
     </nav>

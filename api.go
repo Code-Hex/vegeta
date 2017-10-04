@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/subtle"
 	"net/http"
-	"strconv"
 
 	"github.com/Code-Hex/vegeta/model"
 	"github.com/Code-Hex/vegeta/protos"
@@ -58,11 +57,12 @@ type resultJSON struct {
 }
 
 type getTagsData struct {
-	TagID string `json:"tag_id" validate:"required"`
+	TagID int `json:"tag_id" validate:"required"`
 }
 
 type resultGetTagsJSON struct {
-	Data []model.Data
+	IsSuccess bool         `json:"is_success"`
+	Data      []model.Data `json:"data"`
 }
 
 func JSONTagsData() echo.HandlerFunc {
@@ -72,22 +72,11 @@ func JSONTagsData() echo.HandlerFunc {
 		if err := ctx.BindValidate(param); err != nil {
 			return err
 		}
-		i, err := strconv.Atoi(param.TagID)
-		if err != nil {
-			ctx.Zap.Info(
-				"Failed to convert string to int",
-				zap.Error(err),
-			)
-			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: "タグが存在しませんでした",
-			})
-		}
-		tagID := uint(i)
-		tag, err := model.FindTagByID(ctx.DB, tagID)
+		tag, err := model.FindTagByID(ctx.DB, uint(param.TagID))
 		if err != nil {
 			ctx.Zap.Info("Failed to get tag",
 				zap.Error(err),
-				zap.Uint("tag_id", tagID),
+				zap.Int("tag_id", param.TagID),
 			)
 			return ctx.JSON(http.StatusOK, &resultJSON{
 				Reason: "タグが存在しませんでした",
@@ -95,7 +84,8 @@ func JSONTagsData() echo.HandlerFunc {
 		}
 
 		return ctx.JSON(http.StatusOK, &resultGetTagsJSON{
-			Data: tag.SomeData,
+			IsSuccess: true,
+			Data:      tag.SomeData,
 		})
 	}
 }
