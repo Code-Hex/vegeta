@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Code-Hex/vegeta/html"
+	"github.com/Code-Hex/vegeta/model"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
@@ -19,16 +21,10 @@ type Context struct {
 	Zap *zap.Logger
 }
 
-type baseArg struct{ isAuthed, isAdmin bool }
+type baseArg struct{ Authed, Admin bool }
 
-type Args interface {
-	IsAuthed() bool
-	IsAdmin() bool
-	Year() int
-}
-
-func (b *baseArg) IsAuthed() bool { return b.isAuthed }
-func (b *baseArg) IsAdmin() bool  { return b.isAdmin }
+func (b *baseArg) IsAuthed() bool { return b.Authed }
+func (b *baseArg) IsAdmin() bool  { return b.Admin }
 func (baseArg) Year() int         { return time.Now().Year() }
 
 func (v *Vegeta) NewContext(ctx echo.Context) (*Context, error) {
@@ -40,7 +36,7 @@ func (v *Vegeta) NewContext(ctx echo.Context) (*Context, error) {
 	return c, nil
 }
 
-func (c *Context) GetUserStatus() *baseArg {
+func (c *Context) GetUserStatus() html.Args {
 	var isAuthed, isAdmin bool
 	cookie, err := c.Cookie(keyName)
 	if err == nil && cookie.Value != "" {
@@ -64,8 +60,8 @@ func (c *Context) GetUserStatus() *baseArg {
 		}
 	}
 	return &baseArg{
-		isAuthed: isAuthed,
-		isAdmin:  isAdmin,
+		Authed: isAuthed,
+		Admin:  isAdmin,
 	}
 }
 
@@ -89,7 +85,7 @@ func (c *Context) CreateAPIToken(username string) (string, error) {
 	return t, nil
 }
 
-func (c *Context) SetToken2Cookie(user *User) error {
+func (c *Context) SetToken2Cookie(user *model.User) error {
 	tm := time.Now().Add(time.Hour * 24)
 	claims := &jwtVegetaClaims{
 		Name:  user.Name,
@@ -122,4 +118,20 @@ func (c *Context) ExpiredCookie() {
 		Expires:  expiredAt,
 		HttpOnly: true,
 	})
+}
+
+func (c *Context) BindValidate(i interface{}) error {
+	if err := c.Bind(i); err != nil {
+		c.Zap.Error("Failed to bind from json", zap.Error(err))
+		return c.JSON(http.StatusOK, &resultJSON{
+			Reason: "リクエスト内容を取得できませんでした: " + err.Error(),
+		})
+	}
+	if err := c.Validate(i); err != nil {
+		c.Zap.Error("Failed to validate json", zap.Error(err))
+		return c.JSON(http.StatusOK, &resultJSON{
+			Reason: "入力に誤りがあります: " + err.Error(),
+		})
+	}
+	return nil
 }

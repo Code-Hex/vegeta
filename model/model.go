@@ -1,4 +1,4 @@
-package vegeta
+package model
 
 import (
 	"crypto/sha256"
@@ -9,6 +9,10 @@ import (
 	"github.com/Code-Hex/vegeta/internal/utils"
 	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
+)
+
+type (
+	Users []*User
 )
 
 type User struct {
@@ -199,7 +203,6 @@ func (u *User) AddTag(db *gorm.DB, tag Tag) error {
 			return err
 		}
 	}
-
 	return nil
 }
 

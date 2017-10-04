@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	static "github.com/Code-Hex/echo-static"
+	"github.com/Code-Hex/vegeta/model"
 	"github.com/Code-Hex/vegeta/protos"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	validator "gopkg.in/go-playground/validator.v9"
@@ -178,7 +179,11 @@ func (v *Vegeta) prepare() error {
 		return err
 	}
 	if v.Migrate {
-		r := v.DB.AutoMigrate(&User{}, &Tag{}, &Data{})
+		r := v.DB.AutoMigrate(
+			&model.User{},
+			&model.Tag{},
+			&model.Data{},
+		)
 		if err := r.Error; err != nil {
 			return err
 		}

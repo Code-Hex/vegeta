@@ -1,4 +1,4 @@
-<%: func AdminHTML(args Args, w io.Writer) %>
+<%: func Admin(args AdminArgs, w io.Writer) %>
 
 <%~ "layout/wrapper.html" %>
 
@@ -10,8 +10,8 @@
 <% } %>
 
 <%@ body { %>
-<% adminArgs := args.(*adminArgs) %>
-<input type="hidden" id="api-token" value="<%= adminArgs.token %>">
+<% adminArgs := args %>
+<input type="hidden" id="api-token" value="<%= adminArgs.Token() %>">
 <div class="content">
   <div class="admin-wrapper">
     <div class="container-fluid">
@@ -33,7 +33,7 @@
         </tr>
       </thead>
       <tbody>
-        <% for _, user := range adminArgs.users { %>
+        <% for _, user := range adminArgs.Users() { %>
           <% if user.ID > 1 { %>
           <tr>
             <td><%==u user.ID %></td>

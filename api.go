@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"net/http"
 
+	"github.com/Code-Hex/vegeta/model"
 	"github.com/Code-Hex/vegeta/protos"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
@@ -25,7 +26,7 @@ func (v *Vegeta) NewAPI() *API {
 
 func (a *API) AddData(ctx context.Context, r *protos.RequestFromDevice) (*protos.ResultResponse, error) {
 	token := r.GetToken()
-	user, err := TokenAuth(a.DB, token)
+	user, err := model.TokenAuth(a.DB, token)
 	if err != nil {
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
@@ -33,7 +34,7 @@ func (a *API) AddData(ctx context.Context, r *protos.RequestFromDevice) (*protos
 	if err != nil {
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
-	data := Data{
+	data := model.Data{
 		RemoteAddr: r.GetRemoteAddr(),
 		Payload:    r.GetPayload(),
 		Hostname:   r.GetHostname(),
@@ -44,7 +45,7 @@ func (a *API) AddData(ctx context.Context, r *protos.RequestFromDevice) (*protos
 	return &protos.ResultResponse{}, nil
 }
 
-/* API  */
+/* JSON API  */
 type apiVegetaClaims struct {
 	Name string `json:"name"`
 	jwt.StandardClaims
@@ -53,6 +54,13 @@ type apiVegetaClaims struct {
 type resultJSON struct {
 	IsSuccess bool   `json:"is_success"`
 	Reason    string `json:"reason"`
+}
+
+func JSONTagsData() echo.HandlerFunc {
+	return func(c echo.Context) error {
+
+		return nil
+	}
 }
 
 type createUser struct {
@@ -66,17 +74,8 @@ func JSONCreateUser() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
 		createUser := new(createUser)
-		if err := c.Bind(createUser); err != nil {
-			ctx.Zap.Error("Failed to bind from json", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: "リクエスト内容を取得できませんでした: " + err.Error(),
-			})
-		}
-		if err := c.Validate(createUser); err != nil {
-			ctx.Zap.Error("Failed to validate json", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: "入力に誤りがあります: " + err.Error(),
-			})
+		if err := ctx.BindValidate(createUser); err != nil {
+			return err
 		}
 
 		password := createUser.Password
@@ -88,7 +87,7 @@ func JSONCreateUser() echo.HandlerFunc {
 		}
 		username := createUser.Name
 		isAdmin := createUser.IsAdmin
-		if _, err := CreateUser(ctx.DB, username, password, isAdmin); err != nil {
+		if _, err := model.CreateUser(ctx.DB, username, password, isAdmin); err != nil {
 			ctx.Zap.Error("Failed to create user", zap.Error(err))
 			return ctx.JSON(http.StatusOK, &resultJSON{
 				Reason: "ユーザー作成時にエラーが発生しました。",
@@ -109,22 +108,13 @@ func JSONEditUser() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
 		editUser := new(editUser)
-		if err := c.Bind(editUser); err != nil {
-			ctx.Zap.Error("Failed to bind from json", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: "リクエスト内容を取得できませんでした: " + err.Error(),
-			})
-		}
-		if err := c.Validate(editUser); err != nil {
-			ctx.Zap.Error("Failed to validate json", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: "入力に誤りがあります: " + err.Error(),
-			})
+		if err := ctx.BindValidate(editUser); err != nil {
+			return err
 		}
 
 		userID := editUser.ID
 		isAdmin := editUser.IsAdmin
-		if _, err := EditUser(ctx.DB, userID, isAdmin); err != nil {
+		if _, err := model.EditUser(ctx.DB, userID, isAdmin); err != nil {
 			ctx.Zap.Error("Failed to edit user", zap.Error(err))
 			return ctx.JSON(http.StatusOK, &resultJSON{
 				Reason: "ユーザー編集時にエラーが発生しました。",
@@ -144,21 +134,12 @@ func JSONDeleteUser() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
 		deleteUser := new(deleteUser)
-		if err := c.Bind(deleteUser); err != nil {
-			ctx.Zap.Error("Failed to bind from json", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: "リクエスト内容を取得できませんでした: " + err.Error(),
-			})
-		}
-		if err := c.Validate(deleteUser); err != nil {
-			ctx.Zap.Error("Failed to validate json", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: "入力に誤りがあります: " + err.Error(),
-			})
+		if err := ctx.BindValidate(deleteUser); err != nil {
+			return err
 		}
 
 		userID := deleteUser.ID
-		if _, err := DeleteUser(ctx.DB, userID); err != nil {
+		if _, err := model.DeleteUser(ctx.DB, userID); err != nil {
 			ctx.Zap.Error("Failed to delete user", zap.Error(err))
 			return ctx.JSON(http.StatusOK, &resultJSON{
 				Reason: "ユーザー削除時にエラーが発生しました。",

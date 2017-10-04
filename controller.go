@@ -4,14 +4,15 @@ import (
 	"net/http"
 
 	"github.com/Code-Hex/saltissimo"
+	"github.com/Code-Hex/vegeta/html"
+	"github.com/Code-Hex/vegeta/model"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"go.uber.org/zap"
 )
 
-//go:generate hero -source=template -pkgname=vegeta -dest=.
-
+//go:generate hero -source=template -pkgname=html -dest=html
 type jwtVegetaClaims struct {
 	Name  string `json:"name"`
 	Admin bool   `json:"admin"`
@@ -60,6 +61,17 @@ func (v *Vegeta) registerRoutes() {
 	auth.GET("/mypage", MyPage())
 	auth.GET("/settings", Settings())
 
+	authAPI := auth.Group("/api")
+	authAPI.Use(
+		middleware.JWTWithConfig(middleware.JWTConfig{
+			Claims:      &apiVegetaClaims{},
+			SigningKey:  secret,
+			TokenLookup: "header:Authorization",
+			ContextKey:  "auth_api",
+		}),
+	)
+	authAPI.GET("/", JSONTagsData())
+
 	// only admin
 	admin := auth.Group("/admin")
 	admin.Use(
@@ -82,32 +94,37 @@ func (v *Vegeta) registerRoutes() {
 	)
 	admin.GET("", Admin())
 
-	api := admin.Group("/api")
-	api.Use(
+	adminAPI := admin.Group("/api")
+	adminAPI.Use(
 		middleware.JWTWithConfig(middleware.JWTConfig{
 			Claims:      &apiVegetaClaims{},
 			SigningKey:  secret,
 			TokenLookup: "header:Authorization",
-			ContextKey:  "token",
+			ContextKey:  "admin_api",
 		}),
 	)
-	api.POST("/create", JSONCreateUser())
-	api.POST("/edit", JSONEditUser())
-	api.POST("/delete", JSONDeleteUser())
+	adminAPI.POST("/create", JSONCreateUser())
+	adminAPI.POST("/edit", JSONEditUser())
+	adminAPI.POST("/delete", JSONDeleteUser())
 }
 
 type adminArgs struct {
-	*baseArg
+	html.Args
 	token        string
-	users        []*User
+	users        model.Users
 	isCreated    bool
 	failedReason string
 }
 
+func (a *adminArgs) Token() string      { return a.token }
+func (a *adminArgs) Users() model.Users { return a.users }
+func (a *adminArgs) IsCreated() bool    { return a.isCreated }
+func (a *adminArgs) Reason() string     { return a.failedReason }
+
 func Admin() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		users, err := GetUsers(ctx.DB)
+		users, err := model.GetUsers(ctx.DB)
 		if err != nil {
 			ctx.Zap.Info("Failed to get user list", zap.Error(err))
 			return ctx.Redirect(http.StatusFound, "/mypage")
@@ -118,19 +135,21 @@ func Admin() echo.HandlerFunc {
 			return ctx.Redirect(http.StatusFound, "/mypage")
 		}
 		args := &adminArgs{
-			baseArg: ctx.GetUserStatus(),
-			token:   token,
-			users:   users,
+			Args:  ctx.GetUserStatus(),
+			token: token,
+			users: users,
 		}
-		AdminHTML(args, c.Response())
+		html.Admin(args, c.Response())
 		return nil
 	}
 }
 
 type mypageArgs struct {
-	*baseArg
-	user *User
+	html.Args
+	user *model.User
 }
+
+func (m *mypageArgs) User() *model.User { return m.user }
 
 func MyPage() echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -141,16 +160,16 @@ func MyPage() echo.HandlerFunc {
 			return c.Redirect(http.StatusFound, "/login")
 		}
 		claim := token.Claims.(*jwtVegetaClaims)
-		user, err := FindUserByName(ctx.DB, claim.Name)
+		user, err := model.FindUserByName(ctx.DB, claim.Name)
 		if err != nil {
 			ctx.Zap.Info("Failed to get user via mypage")
 			return c.Redirect(http.StatusFound, "/login")
 		}
 		args := &mypageArgs{
-			baseArg: ctx.GetUserStatus(),
-			user:    user,
+			Args: ctx.GetUserStatus(),
+			user: user,
 		}
-		MyPageHTML(args, ctx.Response())
+		html.MyPage(args, ctx.Response())
 		return nil
 	}
 }
@@ -158,7 +177,7 @@ func MyPage() echo.HandlerFunc {
 func Settings() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		SettingsHTML(ctx.GetUserStatus(), ctx.Response())
+		html.Settings(ctx.GetUserStatus(), ctx.Response())
 		return nil
 	}
 }
@@ -175,10 +194,10 @@ func Login() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
 		arg := ctx.GetUserStatus()
-		if arg.isAuthed {
+		if arg.IsAuthed() {
 			return ctx.Redirect(http.StatusFound, "/mypage")
 		}
-		LoginHTML(arg, ctx.Response())
+		html.Login(arg, ctx.Response())
 		return nil
 	}
 }
@@ -188,7 +207,7 @@ func Auth() echo.HandlerFunc {
 		ctx := c.(*Context)
 		username := ctx.FormValue("username")
 		password := ctx.FormValue("password")
-		user, err := BasicAuth(ctx.DB, username, password)
+		user, err := model.BasicAuth(ctx.DB, username, password)
 		if err != nil {
 			ctx.Zap.Info("Failed to auth user", zap.String("username", username))
 			return ctx.Redirect(http.StatusFound, "/login")
@@ -208,7 +227,7 @@ func Auth() echo.HandlerFunc {
 func Index() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		IndexHTML(ctx.GetUserStatus(), ctx.Response())
+		html.Index(ctx.GetUserStatus(), ctx.Response())
 		return nil
 	}
 }

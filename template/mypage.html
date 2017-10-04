@@ -1,4 +1,4 @@
-<%: func MyPageHTML(args Args, w io.Writer) %>
+<%: func MyPage(args MyPageArgs, w io.Writer) %>
 
 <%~ "layout/wrapper.html" %>
 
@@ -10,11 +10,11 @@
 
 <%@ body { %>
 <% 
-  mypageArgs := args.(*mypageArgs)
-  user := mypageArgs.user
+  mypageArgs := args
+  user := mypageArgs.User()
 %>
 <div class="content row">
-  <div class="col-xs col-md-3" id="tags">
+  <div class="col-xs col-md-2" id="tags">
     <nav class="sidebar-nav">
       <ul class="nav nav-pills flex-column">
         <li class="navbar-brand sidebar-brand">タグ一覧</li>
@@ -26,14 +26,13 @@
   </div>
   <div class="col-xs-9 col-md-9" id="page-content-wrapper">
     <div class="container">
-      <h1>Simple Sidebar</h1>
-      <p>This template has a responsive menu toggling system. The menu will appear collapsed on smaller screens, and will appear non-collapsed on larger screens. When toggled using the button below, the menu will appear/disappear. On small screens, the page content will be pushed off canvas.</p>
-      <p>Make sure to keep all page content within the 
-        <code>#page-content-wrapper</code>.
-      </p>
-      <a href="#menu-toggle" class="btn btn-secondary" id="menu-toggle">Toggle Menu</a>
+      <% if len(user.Tags) > 0 { %>
+        <div class="h2">タグ「<span id="tagname"><%= user.Tags[0].Name %></span>」のグラフ</div>
+        <div id="chart"></div>
+      <% } %>
     </div>
   </div>
+  <div class="col-md"></div>
 </div>
 <% } %>
 
