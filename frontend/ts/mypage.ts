@@ -80,10 +80,10 @@ for (let i = 0; i < actions.length; ++i) {
         let name = elem.getAttribute("name")
         if (name == null) {
             console.log("id is null")
+        } else {
+            let id = Number(name)
+            render.GenerateGraph(id)
         }
-        console.log(name)
-        let id = Number(name)
-        render.GenerateGraph(id)
     }
 
     actions[i].addEventListener('click', function(e) {
