@@ -54,14 +54,11 @@ func MyPage(args MyPageArgs, w io.Writer) {
             <div class="dropdown-menu">
               <a class="dropdown-item" href="/mypage"><i class="fa fa-pagelines" aria-hidden="true"></i> 観察</a>
               <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="/mypage/settings"><i class="fa fa-cog" aria-hidden="true"></i> 設定</a>
               `)
 		if args.IsAdmin() {
 			_buffer.WriteString(`
                 <a class="dropdown-item" href="/mypage/admin"><i class="fa fa-lock" aria-hidden="true"></i> ユーザー管理パネル</a>
-              `)
-		} else {
-			_buffer.WriteString(`
-                <a class="dropdown-item" href="/mypage/settings"><i class="fa fa-cog" aria-hidden="true"></i> 設定</a>
               `)
 		}
 		_buffer.WriteString(`

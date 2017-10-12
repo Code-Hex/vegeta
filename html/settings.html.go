@@ -54,14 +54,11 @@ func Settings(args SettingsArgs, w io.Writer) {
             <div class="dropdown-menu">
               <a class="dropdown-item" href="/mypage"><i class="fa fa-pagelines" aria-hidden="true"></i> 観察</a>
               <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="/mypage/settings"><i class="fa fa-cog" aria-hidden="true"></i> 設定</a>
               `)
 		if args.IsAdmin() {
 			_buffer.WriteString(`
                 <a class="dropdown-item" href="/mypage/admin"><i class="fa fa-lock" aria-hidden="true"></i> ユーザー管理パネル</a>
-              `)
-		} else {
-			_buffer.WriteString(`
-                <a class="dropdown-item" href="/mypage/settings"><i class="fa fa-cog" aria-hidden="true"></i> 設定</a>
               `)
 		}
 		_buffer.WriteString(`
@@ -103,7 +100,7 @@ func Settings(args SettingsArgs, w io.Writer) {
 	_buffer.WriteString(user.Token)
 	_buffer.WriteString(`" readonly>
         </div>
-        <button type="button" id="regen-token" class="btn btn-primary btn-lg float-right">アクセストークンを更新する</button>
+        <button type="button" id="regen-token" class="btn btn-primary float-right">アクセストークンを更新する</button>
       </div>
     </div>
   </div>
@@ -121,7 +118,7 @@ func Settings(args SettingsArgs, w io.Writer) {
           <label for="password-verify">パスワードの再確認</label>
           <input type="password" class="form-control" id="password-verify" required>
         </div>
-        <button type="button" id="reregister-password" class="btn btn-primary btn-lg float-right">パスワードを変更する</button>
+        <button type="button" id="reregister-password" class="btn btn-primary float-right">パスワードを変更する</button>
       </div>
     </div>
   </div>
