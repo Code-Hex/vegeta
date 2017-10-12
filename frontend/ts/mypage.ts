@@ -77,14 +77,15 @@ var actions = <NodeListOf<HTMLElement>>document.querySelectorAll('.action')
 for (let i = 0; i < actions.length; ++i) {
     if (i == 0) {
         let elem = actions[i]
-        elem.getAttribute("name")
+        let name = elem.getAttribute("name")
         if (name == null) {
             console.log("id is null")
         }
+        console.log(name)
         let id = Number(name)
         render.GenerateGraph(id)
     }
-    
+
     actions[i].addEventListener('click', function(e) {
         e.preventDefault()
         let name = this.getAttribute("name")
