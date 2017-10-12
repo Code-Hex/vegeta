@@ -72,6 +72,7 @@ func (v *Vegeta) registerRoutes() {
 	)
 	authAPI.PATCH("/regenerate", RegenerateToken())
 	authAPI.POST("/reregister_password", ReRegisterPassword())
+	authAPI.PUT("/add_tag", AddTag())
 	authAPI.POST("/data", JSONTagsData())
 
 	// only admin

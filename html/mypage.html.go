@@ -110,6 +110,7 @@ func MyPage(args MyPageArgs, w io.Writer) {
   </div>
   <div class="col-xs-9 col-md-9" id="page-content-wrapper">
     <div class="container">
+        <button type="button" id="reregister-password" data-toggle="modal" data-target="#addModal" class="btn btn-primary float-right">タグを追加する</button>
       `)
 	if len(user.Tags) > 0 {
 		_buffer.WriteString(`
@@ -123,6 +124,28 @@ func MyPage(args MyPageArgs, w io.Writer) {
     </div>
   </div>
   <div class="col-md"></div>
+</div>
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addModalLabel">新規タグの追加</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="username" class="form-control-label">タグの名前:</label>
+          <input type="text" class="form-control" id="tag_name" placeholder="タグの名前">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
+        <button type="button" id="add-tag" class="btn btn-primary">追加する</button>
+      </div>
+    </div>
+  </div>
 </div>
 `)
 

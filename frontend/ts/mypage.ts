@@ -13,6 +13,29 @@ class Render {
         return this._token
     }
 
+    public AddTag(): void {
+        let name_input = <HTMLInputElement>document.getElementById('tag_name')
+        let name = name_input.value
+        request.put('/mypage/api/add_tag')
+        .set('Content-Type', 'application/json')
+        .set('Authorization', `Bearer ${ this._token }`)
+        .send({ tag_name: name })
+        .end(function(err, res){
+            if (err || !res.ok) {
+                alert('http error: ' + err);
+            } else {
+                let json = res.body
+                if (json.is_success) {
+                    alert('タグを追加しました')
+                    window.location.reload(true)
+                } else {
+                    alert(`${ json.reason }`)
+                    window.location.reload(true)
+                }
+            }
+        })
+    }
+
     public GenerateGraph(id: Number): void {
         this.render(id)
     }
@@ -98,5 +121,10 @@ for (let i = 0; i < actions.length; ++i) {
     })
 }
 
-
+var addTagElem = <HTMLInputElement>document.getElementById('add-tag')
+console.log(addTagElem)
+addTagElem.addEventListener('click', (e) => {
+    e.preventDefault()
+    render.AddTag()
+})
 

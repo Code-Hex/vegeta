@@ -63,7 +63,7 @@ func RegenerateToken() echo.HandlerFunc {
 		if !ok {
 			ctx.Zap.Info("Failed to check user has a permission")
 			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: "トークンにユーザーの情報がありませんでした",
+				Reason: "APIトークンにユーザーの情報がありませんでした",
 			})
 		}
 		claim := token.Claims.(*jwtVegetaClaims)
@@ -78,6 +78,44 @@ func RegenerateToken() echo.HandlerFunc {
 			ctx.Zap.Info("Failed to regenerate token at /regenerate", zap.Error(err))
 			return ctx.JSON(http.StatusOK, &resultJSON{
 				Reason: "トークンの更新に失敗しました",
+			})
+		}
+		return ctx.JSON(http.StatusOK, &resultJSON{
+			IsSuccess: true,
+		})
+	}
+}
+
+type addTag struct {
+	Name string `json:"tag_name" validate:"required"`
+}
+
+func AddTag() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.(*Context)
+		param := new(addTag)
+		if err := ctx.BindValidate(param); err != nil {
+			return err
+		}
+		token, ok := c.Get("user").(*jwt.Token)
+		if !ok {
+			ctx.Zap.Info("Failed to check user has a permission")
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "APIトークンにユーザーの情報がありませんでした",
+			})
+		}
+		claim := token.Claims.(*jwtVegetaClaims)
+		user, err := model.FindUserByName(ctx.DB, claim.Name)
+		if err != nil {
+			ctx.Zap.Info("Failed to get user at /regenerate")
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "トークンの更新に失敗しました",
+			})
+		}
+
+		if err := user.AddTag(ctx.DB, param.Name); err != nil {
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: err.Error(),
 			})
 		}
 		return ctx.JSON(http.StatusOK, &resultJSON{

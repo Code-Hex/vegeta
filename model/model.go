@@ -181,20 +181,20 @@ func (u *User) ReGenerateUserToken(db *gorm.DB) (*User, error) {
 	return u, nil
 }
 
-func (u *User) AddTag(db *gorm.DB, tag Tag) error {
+func (u *User) AddTag(db *gorm.DB, name string) error {
+	tag := &Tag{Name: name}
 	asn := db.Model(u).Association("Tags")
 	if err := asn.Error; err != nil {
 		return err
 	}
-
 	if !IsValidString(tag.Name) {
-		// TODO: output message via logger
 		return errors.Errorf("Invalid tag name: %s", tag.Name)
 	}
-	if db.Where("name = ? and user_id = ?", tag.Name, u.ID).Find(&Tag{}).RecordNotFound() {
-		if err := asn.Append(tag).Error; err != nil {
-			return err
-		}
+	if !db.Find(&Tag{}, "name = ? and user_id = ?", tag.Name, u.ID).RecordNotFound() {
+		return errors.Errorf("Tag %s is already exist", tag.Name)
+	}
+	if err := asn.Append(tag).Error; err != nil {
+		return err
 	}
 	return nil
 }
