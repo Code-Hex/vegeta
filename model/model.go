@@ -104,22 +104,6 @@ func DeleteUser(db *gorm.DB, userID string) (*User, error) {
 	return user, nil
 }
 
-func ReGenerateUserToken(db *gorm.DB, userID string) (*User, error) {
-	id, err := strconv.ParseInt(userID, 10, 64)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to validate user-id")
-	}
-	user := &User{}
-	if db.First(user, id).RecordNotFound() {
-		return nil, errors.Errorf("UserID: %d is not found", id)
-	}
-	user.Token = utils.GenerateUUID()
-	if err := db.Save(user).Error; err != nil {
-		return nil, err
-	}
-	return user, nil
-}
-
 func TokenAuth(db *gorm.DB, uuid string) (*User, error) {
 	user := new(User)
 	result := db.First(user, "token = ?", uuid)
@@ -149,13 +133,9 @@ func BasicAuth(db *gorm.DB, name, pass string) (*User, error) {
 	return user, nil
 }
 
-func (u *User) UpdatePassword(db *gorm.DB, name, password string) (*User, error) {
+func (u *User) UpdatePassword(db *gorm.DB, password string) (*User, error) {
 	hashed, key, err := saltissimo.HexHash(sha256.New, password)
 	if err != nil {
-		return nil, err
-	}
-	find := db.Model(u).Where("name = ?", name)
-	if err := find.Error; err != nil {
 		return nil, err
 	}
 	u.Password = hashed
@@ -191,6 +171,14 @@ func IsValidString(str string) bool {
 		}
 	}
 	return true
+}
+
+func (u *User) ReGenerateUserToken(db *gorm.DB) (*User, error) {
+	u.Token = utils.GenerateUUID()
+	if err := db.Save(u).Error; err != nil {
+		return nil, err
+	}
+	return u, nil
 }
 
 func (u *User) AddTag(db *gorm.DB, tag Tag) error {

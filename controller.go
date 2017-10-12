@@ -70,6 +70,8 @@ func (v *Vegeta) registerRoutes() {
 			ContextKey:  "auth_api",
 		}),
 	)
+	authAPI.PATCH("/regenerate", RegenerateToken())
+	authAPI.POST("/reregister_password", ReRegisterPassword())
 	authAPI.POST("/data", JSONTagsData())
 
 	// only admin
@@ -182,10 +184,40 @@ func MyPage() echo.HandlerFunc {
 	}
 }
 
+type settingsArgs struct {
+	html.Args
+	user  *model.User
+	token string
+}
+
+func (s *settingsArgs) Token() string     { return s.token }
+func (s *settingsArgs) User() *model.User { return s.user }
+
 func Settings() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		html.Settings(ctx.GetUserStatus(), ctx.Response())
+		token, ok := c.Get("user").(*jwt.Token)
+		if !ok {
+			ctx.Zap.Info("Failed to check user has a permission")
+			return c.Redirect(http.StatusFound, "/login")
+		}
+		claim := token.Claims.(*jwtVegetaClaims)
+		user, err := model.FindUserByName(ctx.DB, claim.Name)
+		if err != nil {
+			ctx.Zap.Info("Failed to get user via mypage")
+			return c.Redirect(http.StatusFound, "/login")
+		}
+		t, err := ctx.CreateAPIToken(user.Name)
+		if err != nil {
+			ctx.Zap.Info("Failed to create api token at mypage", zap.Error(err))
+			return c.Redirect(http.StatusFound, "/login")
+		}
+		args := &settingsArgs{
+			Args:  ctx.GetUserStatus(),
+			user:  user,
+			token: t,
+		}
+		html.Settings(args, ctx.Response())
 		return nil
 	}
 }

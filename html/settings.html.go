@@ -9,7 +9,7 @@ import (
 	"github.com/shiyanhui/hero"
 )
 
-func Settings(args Args, w io.Writer) {
+func Settings(args SettingsArgs, w io.Writer) {
 	_buffer := hero.GetBuffer()
 	defer hero.PutBuffer(_buffer)
 	_buffer.WriteString(`<!DOCTYPE html>
@@ -26,7 +26,6 @@ func Settings(args Args, w io.Writer) {
   <script src="/assets/js/bootstrap.min.js"></script>
   `)
 	_buffer.WriteString(`
-  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap4.min.css">
   <script src="/assets/js/main.js"></script>
 `)
 
@@ -86,6 +85,49 @@ func Settings(args Args, w io.Writer) {
   <main class="mb-auto">
     `)
 
+	settingsArgs := args
+	user := settingsArgs.User()
+
+	_buffer.WriteString(`
+<input type="hidden" id="api-token" value="`)
+	hero.EscapeHTML(settingsArgs.Token(), _buffer)
+	_buffer.WriteString(`">
+<div class="app-details">
+  <div class="container">
+    <div class="row">
+      <div class="col-xs-12 col-md-6">
+        <h3>アクセストークンの変更</h3>
+        <div class="form-group">
+          <label for="access-token">アクセストークン</label>
+          <input type="text" class="form-control" id="access-token" value="`)
+	_buffer.WriteString(user.Token)
+	_buffer.WriteString(`" readonly>
+        </div>
+        <button type="button" id="regen-token" class="btn btn-primary btn-lg float-right">アクセストークンを更新する</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="app-details">
+  <div class="container">
+    <div class="row">
+      <div class="col-xs-12 col-md-6">
+        <h3>パスワードの変更</h3>
+        <div class="form-group">
+          <label for="password">パスワード</label>
+          <input type="password" class="form-control" id="password" required>
+        </div>
+        <div class="form-group">
+          <label for="password-verify">パスワードの再確認</label>
+          <input type="password" class="form-control" id="password-verify" required>
+        </div>
+        <button type="button" id="reregister-password" class="btn btn-primary btn-lg float-right">パスワードを変更する</button>
+      </div>
+    </div>
+  </div>
+</div>
+`)
+
 	_buffer.WriteString(`
   </main>
   <footer class="footer">
@@ -95,7 +137,7 @@ func Settings(args Args, w io.Writer) {
   </footer>
   `)
 	_buffer.WriteString(`
-  <script src="/assets/js/admin.js"></script>
+  <script src="/assets/js/settings.js"></script>
 `)
 
 	_buffer.WriteString(`

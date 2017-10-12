@@ -56,6 +56,82 @@ type resultJSON struct {
 	Reason    string `json:"reason"`
 }
 
+func RegenerateToken() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.(*Context)
+		token, ok := c.Get("user").(*jwt.Token)
+		if !ok {
+			ctx.Zap.Info("Failed to check user has a permission")
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "トークンにユーザーの情報がありませんでした",
+			})
+		}
+		claim := token.Claims.(*jwtVegetaClaims)
+		user, err := model.FindUserByName(ctx.DB, claim.Name)
+		if err != nil {
+			ctx.Zap.Info("Failed to get user at /regenerate")
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "トークンの更新に失敗しました",
+			})
+		}
+		if _, err := user.ReGenerateUserToken(ctx.DB); err != nil {
+			ctx.Zap.Info("Failed to regenerate token at /regenerate", zap.Error(err))
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "トークンの更新に失敗しました",
+			})
+		}
+		return ctx.JSON(http.StatusOK, &resultJSON{
+			IsSuccess: true,
+		})
+	}
+}
+
+type reregisterPassword struct {
+	Password       string `json:"password" validate:"required"`
+	VerifyPassword string `json:"verify_password" validate:"required"`
+}
+
+func ReRegisterPassword() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.(*Context)
+		param := new(reregisterPassword)
+		if err := ctx.BindValidate(param); err != nil {
+			return err
+		}
+		password := param.Password
+		verifyPassword := param.VerifyPassword
+		if subtle.ConstantTimeCompare([]byte(password), []byte(verifyPassword)) != 1 {
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "入力したパスワードと確認用のパスワードが一致しませんでした。",
+			})
+		}
+		token, ok := c.Get("user").(*jwt.Token)
+		if !ok {
+			ctx.Zap.Info("Failed to check user has a permission")
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "ユーザーの情報がありませんでした",
+			})
+		}
+		claim := token.Claims.(*jwtVegetaClaims)
+		user, err := model.FindUserByName(ctx.DB, claim.Name)
+		if err != nil {
+			ctx.Zap.Info("Failed to get user at /reregister_password", zap.Error(err))
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: err.Error(),
+			})
+		}
+		if _, err := user.UpdatePassword(ctx.DB, password); err != nil {
+			ctx.Zap.Info("Failed to get user at /reregister_password", zap.Error(err))
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: err.Error(),
+			})
+		}
+		return ctx.JSON(http.StatusOK, &resultJSON{
+			IsSuccess: true,
+		})
+	}
+}
+
 type getTagsData struct {
 	TagID int `json:"tag_id" validate:"required"`
 }

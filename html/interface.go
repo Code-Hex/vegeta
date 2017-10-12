@@ -24,4 +24,10 @@ type (
 		User() *model.User
 		Token() string
 	}
+
+	SettingsArgs interface {
+		Args
+		User() *model.User
+		Token() string
+	}
 )
