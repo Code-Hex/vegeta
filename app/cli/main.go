@@ -61,6 +61,26 @@ func (c *CLI) run() error {
 }
 
 func (c *CLI) exec() error {
+	conn, err := c.setupConnection()
+	if err != nil {
+		return errors.Wrap(err, "Failed to connect grpc")
+	}
+	defer conn.Close()
+	cli := protos.NewCollectionClient(conn)
+
+	// Add tag mode
+	if c.Add {
+		_, err := cli.AddTag(context.Background(), &protos.AddTagFromDevice{
+			TagName: c.Tag,
+			Token:   c.Token,
+		})
+		if err != nil {
+			return errors.Wrap(err, "Failed to add tag")
+		}
+		fmt.Println("Send Complete")
+		return nil
+	}
+
 	data, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
 		return err
@@ -82,13 +102,6 @@ func (c *CLI) exec() error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to get hostname")
 	}
-	conn, err := c.setupConnection()
-	if err != nil {
-		return errors.Wrap(err, "Failed to connect grpc")
-	}
-	defer conn.Close()
-
-	cli := protos.NewCollectionClient(conn)
 	_, err = cli.AddData(context.Background(), &protos.RequestFromDevice{
 		TagName:    c.Tag,
 		Payload:    jsonStr,

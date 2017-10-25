@@ -3,6 +3,7 @@ package vegeta
 import (
 	"context"
 	"crypto/subtle"
+	"fmt"
 	"net/http"
 
 	"github.com/Code-Hex/vegeta/model"
@@ -40,6 +41,25 @@ func (a *API) AddData(ctx context.Context, r *protos.RequestFromDevice) (*protos
 		Hostname:   r.GetHostname(),
 	}
 	if err := tag.AddData(a.DB, data); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	return &protos.ResultResponse{}, nil
+}
+
+func (a *API) AddTag(ctx context.Context, r *protos.AddTagFromDevice) (*protos.ResultResponse, error) {
+	token := r.GetToken()
+	user, err := model.TokenAuth(a.DB, token)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	tag := r.GetTagName()
+	if _, err := user.FindByTagName(a.DB, tag); err == nil {
+		return nil, status.Error(
+			codes.NotFound,
+			fmt.Sprintf("Tag: %s is already exists", tag),
+		)
+	}
+	if err := user.AddTag(a.DB, tag); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	return &protos.ResultResponse{}, nil
