@@ -82,12 +82,12 @@ func (v *Vegeta) registerRoutes() {
 			return func(c echo.Context) error {
 				token, ok := c.Get("user").(*jwt.Token)
 				if !ok {
-					v.Info("Failed to check user is admin")
+					v.Error("Failed to check user is admin")
 					return c.Redirect(http.StatusFound, "/login")
 				}
 				user := token.Claims.(*jwtVegetaClaims)
 				if !user.Admin {
-					v.Info("Failed to access admin page", zap.String("username", user.Name))
+					v.Error("Failed to access admin page", zap.String("username", user.Name))
 					return c.Redirect(http.StatusFound, "/login")
 				}
 				c.Set("username", user.Name)
@@ -129,12 +129,12 @@ func Admin() echo.HandlerFunc {
 		ctx := c.(*Context)
 		users, err := model.GetUsers(ctx.DB)
 		if err != nil {
-			ctx.Zap.Info("Failed to get user list", zap.Error(err))
+			ctx.Zap.Error("Failed to get user list", zap.Error(err))
 			return ctx.Redirect(http.StatusFound, "/mypage")
 		}
 		token, err := ctx.CreateAPIToken(ctx.Get("username").(string))
 		if err != nil {
-			ctx.Zap.Info("Failed to create api token", zap.Error(err))
+			ctx.Zap.Error("Failed to create api token", zap.Error(err))
 			return ctx.Redirect(http.StatusFound, "/mypage")
 		}
 		args := &adminArgs{
@@ -161,18 +161,18 @@ func MyPage() echo.HandlerFunc {
 		ctx := c.(*Context)
 		token, ok := c.Get("user").(*jwt.Token)
 		if !ok {
-			ctx.Zap.Info("Failed to check user has a permission")
+			ctx.Zap.Error("Failed to check user has a permission")
 			return c.Redirect(http.StatusFound, "/login")
 		}
 		claim := token.Claims.(*jwtVegetaClaims)
 		user, err := model.FindUserByName(ctx.DB, claim.Name)
 		if err != nil {
-			ctx.Zap.Info("Failed to get user via mypage")
+			ctx.Zap.Error("Failed to get user via mypage")
 			return c.Redirect(http.StatusFound, "/login")
 		}
 		t, err := ctx.CreateAPIToken(user.Name)
 		if err != nil {
-			ctx.Zap.Info("Failed to create api token at mypage", zap.Error(err))
+			ctx.Zap.Error("Failed to create api token at mypage", zap.Error(err))
 			return c.Redirect(http.StatusFound, "/login")
 		}
 		args := &mypageArgs{
@@ -199,18 +199,18 @@ func Settings() echo.HandlerFunc {
 		ctx := c.(*Context)
 		token, ok := c.Get("user").(*jwt.Token)
 		if !ok {
-			ctx.Zap.Info("Failed to check user has a permission")
+			ctx.Zap.Error("Failed to check user has a permission")
 			return c.Redirect(http.StatusFound, "/login")
 		}
 		claim := token.Claims.(*jwtVegetaClaims)
 		user, err := model.FindUserByName(ctx.DB, claim.Name)
 		if err != nil {
-			ctx.Zap.Info("Failed to get user via mypage")
+			ctx.Zap.Error("Failed to get user via mypage")
 			return c.Redirect(http.StatusFound, "/login")
 		}
 		t, err := ctx.CreateAPIToken(user.Name)
 		if err != nil {
-			ctx.Zap.Info("Failed to create api token at mypage", zap.Error(err))
+			ctx.Zap.Error("Failed to create api token at mypage", zap.Error(err))
 			return c.Redirect(http.StatusFound, "/login")
 		}
 		args := &settingsArgs{
@@ -250,7 +250,7 @@ func Auth() echo.HandlerFunc {
 		password := ctx.FormValue("password")
 		user, err := model.BasicAuth(ctx.DB, username, password)
 		if err != nil {
-			ctx.Zap.Info("Failed to auth user", zap.String("username", username))
+			ctx.Zap.Error("Failed to auth user", zap.String("username", username))
 			return ctx.Redirect(http.StatusFound, "/login")
 		}
 		if err := ctx.SetToken2Cookie(user); err != nil {
