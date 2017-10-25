@@ -1,14 +1,18 @@
 package vegeta
 
 import (
+	"encoding/gob"
 	"net/http"
+	"os"
 
-	"github.com/Code-Hex/saltissimo"
 	"github.com/Code-Hex/vegeta/html"
+	"github.com/Code-Hex/vegeta/internal/session"
 	"github.com/Code-Hex/vegeta/model"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/sessions"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -22,14 +26,14 @@ type jwtVegetaClaims struct {
 var secret []byte
 
 func init() {
-	var err error
-	secret, err = saltissimo.RandomBytes(saltissimo.SaltLength)
-	if err != nil {
-		panic(err)
-	}
+	secret = []byte(os.Getenv("VEGETA_SECRET"))
+	gob.Register(&model.User{}) // Register for session
 }
 
 func (v *Vegeta) registerRoutes() {
+	store := sessions.NewCookieStore(secret)
+	store.Options.HttpOnly = true
+	v.Use(session.Middleware("vegeta-session", store))
 	v.GET("/", Index())
 	v.GET("/login", Login())
 	v.POST("/auth", Auth())
@@ -43,18 +47,22 @@ func (v *Vegeta) registerRoutes() {
 					if herr, ok := err.(*echo.HTTPError); ok && herr.Code == 404 {
 						return err
 					}
-					v.Error("Error via restricted group", zap.Error(err))
+					v.Logger.Error("Error on restricted group", zap.Error(err))
 					return c.Redirect(http.StatusFound, "/login")
 				}
 				return nil
 			}
 		},
-		middleware.JWTWithConfig(middleware.JWTConfig{
-			Claims:      &jwtVegetaClaims{},
-			SigningKey:  secret,
-			TokenLookup: "cookie:token",
-			ContextKey:  "user",
-		}),
+		func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(c echo.Context) error {
+				ctx := c.(*Context)
+				status := ctx.GetUserStatus()
+				if !status.IsAuthed() {
+					return c.Redirect(http.StatusFound, "/login")
+				}
+				return next(c)
+			}
+		},
 	)
 	auth.GET("", MyPage())
 	auth.GET("/logout", Logout())
@@ -80,17 +88,11 @@ func (v *Vegeta) registerRoutes() {
 	admin.Use(
 		func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(c echo.Context) error {
-				token, ok := c.Get("user").(*jwt.Token)
-				if !ok {
-					v.Info("Failed to check user is admin")
+				ctx := c.(*Context)
+				status := ctx.GetUserStatus()
+				if !status.IsAdmin() {
 					return c.Redirect(http.StatusFound, "/login")
 				}
-				user := token.Claims.(*jwtVegetaClaims)
-				if !user.Admin {
-					v.Info("Failed to access admin page", zap.String("username", user.Name))
-					return c.Redirect(http.StatusFound, "/login")
-				}
-				c.Set("username", user.Name)
 				return next(c)
 			}
 		},
@@ -127,14 +129,16 @@ func (a *adminArgs) Reason() string     { return a.failedReason }
 func Admin() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
+		s := session.Get(ctx)
+		user := s.Get("user").(*model.User)
 		users, err := model.GetUsers(ctx.DB)
 		if err != nil {
-			ctx.Zap.Info("Failed to get user list", zap.Error(err))
+			ctx.Zap.Error("Failed to get user list", zap.Error(err))
 			return ctx.Redirect(http.StatusFound, "/mypage")
 		}
-		token, err := ctx.CreateAPIToken(ctx.Get("username").(string))
+		token, err := ctx.CreateAPIToken(user.Name)
 		if err != nil {
-			ctx.Zap.Info("Failed to create api token", zap.Error(err))
+			ctx.Zap.Error("Failed to create api token", zap.Error(err))
 			return ctx.Redirect(http.StatusFound, "/mypage")
 		}
 		args := &adminArgs{
@@ -159,21 +163,11 @@ func (m *mypageArgs) User() *model.User { return m.user }
 func MyPage() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		token, ok := c.Get("user").(*jwt.Token)
-		if !ok {
-			ctx.Zap.Info("Failed to check user has a permission")
-			return c.Redirect(http.StatusFound, "/login")
-		}
-		claim := token.Claims.(*jwtVegetaClaims)
-		user, err := model.FindUserByName(ctx.DB, claim.Name)
-		if err != nil {
-			ctx.Zap.Info("Failed to get user via mypage")
-			return c.Redirect(http.StatusFound, "/login")
-		}
+		s := session.Get(ctx)
+		user := s.Get("user").(*model.User)
 		t, err := ctx.CreateAPIToken(user.Name)
 		if err != nil {
-			ctx.Zap.Info("Failed to create api token at mypage", zap.Error(err))
-			return c.Redirect(http.StatusFound, "/login")
+			return errors.Wrap(err, "Failed to create api token at mypage")
 		}
 		args := &mypageArgs{
 			Args:  ctx.GetUserStatus(),
@@ -197,21 +191,11 @@ func (s *settingsArgs) User() *model.User { return s.user }
 func Settings() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		token, ok := c.Get("user").(*jwt.Token)
-		if !ok {
-			ctx.Zap.Info("Failed to check user has a permission")
-			return c.Redirect(http.StatusFound, "/login")
-		}
-		claim := token.Claims.(*jwtVegetaClaims)
-		user, err := model.FindUserByName(ctx.DB, claim.Name)
-		if err != nil {
-			ctx.Zap.Info("Failed to get user via mypage")
-			return c.Redirect(http.StatusFound, "/login")
-		}
+		s := session.Get(ctx)
+		user := s.Get("user").(*model.User)
 		t, err := ctx.CreateAPIToken(user.Name)
 		if err != nil {
-			ctx.Zap.Info("Failed to create api token at mypage", zap.Error(err))
-			return c.Redirect(http.StatusFound, "/login")
+			return errors.Wrap(err, "Failed to create api token at mypage")
 		}
 		args := &settingsArgs{
 			Args:  ctx.GetUserStatus(),
@@ -226,7 +210,10 @@ func Settings() echo.HandlerFunc {
 func Logout() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		ctx.ExpiredCookie()
+		s := session.Get(ctx)
+		if err := s.Expire(); err != nil {
+			return err
+		}
 		return ctx.Redirect(http.StatusFound, "/login")
 	}
 }
@@ -250,16 +237,13 @@ func Auth() echo.HandlerFunc {
 		password := ctx.FormValue("password")
 		user, err := model.BasicAuth(ctx.DB, username, password)
 		if err != nil {
-			ctx.Zap.Info("Failed to auth user", zap.String("username", username))
+			ctx.Zap.Error("Failed to auth user", zap.String("username", username))
 			return ctx.Redirect(http.StatusFound, "/login")
 		}
-		if err := ctx.SetToken2Cookie(user); err != nil {
-			ctx.Zap.Error(
-				"Failed to set token to cookie",
-				zap.Error(err),
-				zap.String("username", username),
-			)
-			return ctx.Redirect(http.StatusFound, "/login")
+		s := session.Get(ctx)
+		s.Set("user", user)
+		if err := s.Save(); err != nil {
+			return err
 		}
 		return ctx.Redirect(http.StatusFound, "/mypage")
 	}
