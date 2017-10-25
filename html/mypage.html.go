@@ -89,41 +89,39 @@ func MyPage(args MyPageArgs, w io.Writer) {
 <input type="hidden" id="api-token" value="`)
 	hero.EscapeHTML(mypageArgs.Token(), _buffer)
 	_buffer.WriteString(`">
-<div class="content row">
-  <div class="col-xs col-md-2" id="tags">
-    <nav class="sidebar-nav">
-      <ul class="nav nav-pills flex-column">
-        <li class="navbar-brand sidebar-brand">タグ一覧</li>
-        `)
+<div class="content">
+  <div class="container">
+    <div class="row float-right">
+      <div class="col">
+        <select id="action" class="form-control tag-select">
+          `)
 	for _, tag := range user.Tags {
 		_buffer.WriteString(`
-        <li class="nav-item"><a href="javascript:void(0)" class="action" name="`)
+            <option value="`)
 		hero.FormatUint(uint64(tag.ID), _buffer)
 		_buffer.WriteString(`">`)
 		hero.EscapeHTML(tag.Name, _buffer)
-		_buffer.WriteString(`</a></li>
-        `)
+		_buffer.WriteString(`</option>
+          `)
 	}
 	_buffer.WriteString(`
-      </ul>
-    </nav>
-  </div>
-  <div class="col-xs-9 col-md-9" id="page-content-wrapper">
-    <div class="container">
-        <button type="button" id="reregister-password" data-toggle="modal" data-target="#addModal" class="btn btn-primary float-right">タグを追加する</button>
-      `)
+        </select>
+      </div>
+      <div class="col">
+          <button type="button" id="reregister-password" data-toggle="modal" data-target="#addModal" class="btn btn-primary">タグを追加する</button>
+      </div>
+    </div>
+    `)
 	if len(user.Tags) > 0 {
 		_buffer.WriteString(`
-        <div class="h2">タグ「<span id="tagname">`)
+      <div class="h2">タグ「<span id="tagname">`)
 		hero.EscapeHTML(user.Tags[0].Name, _buffer)
 		_buffer.WriteString(`</span>」のグラフ</div>
-        <div id="chart"></div>
-      `)
+      <div id="chart"></div>
+    `)
 	}
 	_buffer.WriteString(`
-    </div>
   </div>
-  <div class="col-md"></div>
 </div>
 <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">

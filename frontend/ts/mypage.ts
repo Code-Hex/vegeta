@@ -90,36 +90,19 @@ class Render {
                     }
                 }
             }
-        })        
+        })
     }
 }
 
 var render = new Render()
 
-var actions = <NodeListOf<HTMLElement>>document.querySelectorAll('.action')
-for (let i = 0; i < actions.length; ++i) {
-    if (i == 0) {
-        let elem = actions[i]
-        let name = elem.getAttribute("name")
-        if (name == null) {
-            console.log("id is null")
-        } else {
-            let id = Number(name)
-            render.GenerateGraph(id)
-        }
-    }
-
-    actions[i].addEventListener('click', function(e) {
-        e.preventDefault()
-        let name = this.getAttribute("name")
-        if (name == null) {
-            console.log("id is null")
-            return
-        }
-        let id = Number(name)
-        render.GenerateGraph(id)
-    })
-}
+var action = <HTMLInputElement>document.getElementById('action')
+action.addEventListener('change', (e) => {
+    e.preventDefault()
+    let id = Number(action.value)
+    console.log(id)
+    render.GenerateGraph(id)
+})
 
 var addTagElem = <HTMLInputElement>document.getElementById('add-tag')
 console.log(addTagElem)
