@@ -49,10 +49,6 @@ func (c *Context) GetUserStatus() html.Args {
 	}
 }
 
-const keyName = "token"
-
-var expiredAt = time.Now()
-
 func (c *Context) CreateAPIToken(username string) (string, error) {
 	tm := time.Now().Add(time.Hour * 24)
 	claims := &apiVegetaClaims{
