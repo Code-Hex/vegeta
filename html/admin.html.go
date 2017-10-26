@@ -87,7 +87,7 @@ func Admin(args AdminArgs, w io.Writer) {
 <input type="hidden" id="api-token" value="`)
 	hero.EscapeHTML(adminArgs.Token(), _buffer)
 	_buffer.WriteString(`">
-<div class="content">
+<div class="admin-content">
   <div class="admin-wrapper">
     <div class="container-fluid">
       <div class="row">
