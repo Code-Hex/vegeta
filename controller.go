@@ -164,7 +164,11 @@ func MyPage() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
 		s := session.Get(ctx)
-		user := s.Get("user").(*model.User)
+		cu := s.Get("user").(*model.User)
+		user, err := model.FindUserByName(ctx.DB, cu.Name)
+		if err != nil {
+			return errors.Wrap(err, "Failed to find user")
+		}
 		t, err := ctx.CreateAPIToken(user.Name)
 		if err != nil {
 			return errors.Wrap(err, "Failed to create api token at mypage")
@@ -192,7 +196,11 @@ func Settings() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
 		s := session.Get(ctx)
-		user := s.Get("user").(*model.User)
+		cu := s.Get("user").(*model.User)
+		user, err := model.FindUserByName(ctx.DB, cu.Name)
+		if err != nil {
+			return errors.Wrap(err, "Failed to find user")
+		}
 		t, err := ctx.CreateAPIToken(user.Name)
 		if err != nil {
 			return errors.Wrap(err, "Failed to create api token at mypage")

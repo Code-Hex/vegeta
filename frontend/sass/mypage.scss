@@ -7,51 +7,19 @@ $min-grid: (
 
 .content {
   height: 100%;
+  margin-top: 40px;
   margin-bottom: -40px;
+  padding-bottom: 20px;
 }
 
-.sidebar-nav {
-  height: 79vh;
-  padding-top: 20px;
-  background-color: #000;
-  list-style: none;
-  overflow-x: hidden;
-  overflow-y: scroll;
+.sub {
+  margin-bottom: 20px !important;
 }
 
-.sidebar-nav li {
-  text-indent: 20px;
-  line-height: 40px;
-}
-
-.sidebar-nav li a {
-  display: block;
-  text-decoration: none;
-  color: #999999;
-}
-
-.sidebar-nav li a:hover {
-  text-decoration: none;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.sidebar-nav li a:active, .sidebar-nav li a:focus {
-  text-decoration: none;
-}
-
-.sidebar-brand {
-  height: 65px;
-  font-size: 18px;
-  line-height: 60px;
-  color: #fff;
-}
-
-.sidebar-nav > .sidebar-brand :hover {
-  color: #fff;
-  background: none;
-}
-
-#page-content-wrapper {
-  padding: 20px 0;
+.json {
+  padding: 20px;
+  max-height: 320px;
+  background-color: #F6F8FB;
+  overflow: scroll;
+  border-radius: 5px;
 }

@@ -79,14 +79,14 @@ type resultJSON struct {
 func RegenerateToken() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.(*Context)
-		token, ok := c.Get("user").(*jwt.Token)
+		token, ok := c.Get("auth_api").(*jwt.Token)
 		if !ok {
 			ctx.Zap.Info("Failed to check user has a permission")
 			return ctx.JSON(http.StatusOK, &resultJSON{
 				Reason: "APIトークンにユーザーの情報がありませんでした",
 			})
 		}
-		claim := token.Claims.(*jwtVegetaClaims)
+		claim := token.Claims.(*apiVegetaClaims)
 		user, err := model.FindUserByName(ctx.DB, claim.Name)
 		if err != nil {
 			ctx.Zap.Info("Failed to get user at /regenerate")
@@ -117,14 +117,14 @@ func AddTag() echo.HandlerFunc {
 		if err := ctx.BindValidate(param); err != nil {
 			return err
 		}
-		token, ok := c.Get("user").(*jwt.Token)
+		token, ok := c.Get("auth_api").(*jwt.Token)
 		if !ok {
 			ctx.Zap.Info("Failed to check user has a permission")
 			return ctx.JSON(http.StatusOK, &resultJSON{
 				Reason: "APIトークンにユーザーの情報がありませんでした",
 			})
 		}
-		claim := token.Claims.(*jwtVegetaClaims)
+		claim := token.Claims.(*apiVegetaClaims)
 		user, err := model.FindUserByName(ctx.DB, claim.Name)
 		if err != nil {
 			ctx.Zap.Info("Failed to get user at /regenerate")
@@ -163,14 +163,14 @@ func ReRegisterPassword() echo.HandlerFunc {
 				Reason: "入力したパスワードと確認用のパスワードが一致しませんでした。",
 			})
 		}
-		token, ok := c.Get("user").(*jwt.Token)
+		token, ok := c.Get("auth_api").(*jwt.Token)
 		if !ok {
 			ctx.Zap.Info("Failed to check user has a permission")
 			return ctx.JSON(http.StatusOK, &resultJSON{
 				Reason: "ユーザーの情報がありませんでした",
 			})
 		}
-		claim := token.Claims.(*jwtVegetaClaims)
+		claim := token.Claims.(*apiVegetaClaims)
 		user, err := model.FindUserByName(ctx.DB, claim.Name)
 		if err != nil {
 			ctx.Zap.Info("Failed to get user at /reregister_password", zap.Error(err))
