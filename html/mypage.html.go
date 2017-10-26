@@ -91,38 +91,55 @@ func MyPage(args MyPageArgs, w io.Writer) {
 	_buffer.WriteString(`">
 <div class="content">
   <div class="container">
-    <div class="row float-right">
-      <div class="col">
-        <select id="action" class="form-control tag-select">
-          `)
-	for _, tag := range user.Tags {
-		_buffer.WriteString(`
-            <option value="`)
-		hero.FormatUint(uint64(tag.ID), _buffer)
-		_buffer.WriteString(`">`)
-		hero.EscapeHTML(tag.Name, _buffer)
-		_buffer.WriteString(`</option>
-          `)
-	}
-	_buffer.WriteString(`
-        </select>
-      </div>
-      <div class="col">
-          <button type="button" id="reregister-password" data-toggle="modal" data-target="#addModal" class="btn btn-primary">タグを追加する</button>
-      </div>
-    </div>
     `)
 	if len(user.Tags) > 0 {
 		_buffer.WriteString(`
-      <div class="h2">タグ「<span id="tagname">`)
-		hero.EscapeHTML(user.Tags[0].Name, _buffer)
-		_buffer.WriteString(`</span>」のグラフ</div>
-      <div id="chart"></div>
+      <div class="row float-right">
+        <div class="col">
+          <select id="action" class="form-control tag-select">
+            <option value="">タグ一覧</option>
+            `)
+		for _, tag := range user.Tags {
+			_buffer.WriteString(`
+            <option value="`)
+			hero.FormatUint(uint64(tag.ID), _buffer)
+			_buffer.WriteString(`">`)
+			hero.EscapeHTML(tag.Name, _buffer)
+			_buffer.WriteString(`</option>
+            `)
+		}
+		_buffer.WriteString(`
+          </select>
+        </div>
+        <div class="col">
+            <button type="button" id="reregister-password" data-toggle="modal" data-target="#addModal" class="btn btn-primary">タグを追加する</button>
+        </div>
+      </div>
+      <div class="h2" id="tagname">観察ページ</div>
+      <hr>
+      <div class="h3 sub">直近 1 週間の様子</div>
+      <div class="row">
+        <div class="col-xs-12 col-md-8"><div id="week-chart"></div></div>
+        <div class="col-xs-12 col-md-4 json" id="week-json"></div>
+      </div>
+      <hr>
+      <div class="h3 sub">直近 1 ヶ月の様子</div>
+      <div class="row">
+        <div class="col-xs-12 col-md-8"><div id="month-chart"></div></div>
+        <div class="col-xs-12 col-md-4 json" id="month-json"></div>
+      </div>
+      <hr>
+      <div class="h3 sub">これまでの様子</div>
+      <div class="row">
+        <div class="col-xs-12 col-md-8"><div id="chart"></div></div>
+        <div class="col-xs-12 col-md-4 json" id="json"></div>
+      </div>
     `)
 	}
 	_buffer.WriteString(`
   </div>
 </div>
+<!-- Modal -->
 <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">

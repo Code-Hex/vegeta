@@ -9,8 +9,17 @@ $min-grid: (
   height: 100%;
   margin-top: 40px;
   margin-bottom: -40px;
+  padding-bottom: 20px;
 }
 
-#chart {
-  margin-top: 40px;
+.sub {
+  margin-bottom: 20px !important;
+}
+
+.json {
+  padding: 20px;
+  max-height: 320px;
+  background-color: #F6F8FB;
+  overflow: scroll;
+  border-radius: 5px;
 }
