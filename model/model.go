@@ -19,7 +19,7 @@ type (
 type User struct {
 	gorm.Model
 	Admin    bool   `gorm:"not null"`
-	Name     string `gorm:"not null"`
+	Name     string `gorm:"not null;index:idx_name"`
 	Password string `gorm:"not null"`
 	Salt     string `gorm:"not null"`
 	Token    string `gorm:"not null"`
@@ -29,7 +29,7 @@ type User struct {
 type Tag struct {
 	gorm.Model
 	UserID   uint   `gorm:"not null"`
-	Name     string `gorm:"not null"`
+	Name     string `gorm:"not null;index:idx_name"`
 	SomeData []Data `gorm:"ForeignKey:TagID"`
 }
 
@@ -61,9 +61,14 @@ func CreateUser(db *gorm.DB, name, password string, isAdmin bool) (*User, error)
 	user.Salt = key
 	user.Token = utils.GenerateUUID()
 	user.Admin = isAdmin
-	if err := db.Create(user).Error; err != nil {
+
+	tx := db.Begin()
+	if err := tx.Create(user).Error; err != nil {
+		tx.Rollback()
 		return nil, err
 	}
+	tx.Commit()
+
 	return user, nil
 }
 
@@ -80,9 +85,14 @@ func EditUser(db *gorm.DB, userID string, isAdmin bool) (*User, error) {
 		return nil, errors.Errorf("UserID: %d is not found", id)
 	}
 	user.Admin = isAdmin
-	if err := db.Save(user).Error; err != nil {
+
+	tx := db.Begin()
+	if err := tx.Save(user).Error; err != nil {
+		tx.Rollback()
 		return nil, err
 	}
+	tx.Commit()
+
 	return user, nil
 }
 
@@ -98,9 +108,13 @@ func DeleteUser(db *gorm.DB, userID string) (*User, error) {
 	if db.First(user, id).RecordNotFound() {
 		return nil, errors.Errorf("UserID: %d is not found", id)
 	}
+	tx := db.Begin()
 	if err := db.Delete(user).Error; err != nil {
+		tx.Rollback()
 		return nil, err
 	}
+	tx.Commit()
+
 	return user, nil
 }
 
@@ -140,9 +154,14 @@ func (u *User) UpdatePassword(db *gorm.DB, password string) (*User, error) {
 	}
 	u.Password = hashed
 	u.Salt = key
-	if err := db.Save(u).Error; err != nil {
+
+	tx := db.Begin()
+	if err := tx.Save(u).Error; err != nil {
+		tx.Rollback()
 		return nil, err
 	}
+	tx.Commit()
+
 	return u, nil
 }
 
@@ -175,27 +194,34 @@ func IsValidString(str string) bool {
 
 func (u *User) ReGenerateUserToken(db *gorm.DB) (*User, error) {
 	u.Token = utils.GenerateUUID()
-	if err := db.Save(u).Error; err != nil {
+	tx := db.Begin()
+	if err := tx.Save(u).Error; err != nil {
+		tx.Rollback()
 		return nil, err
 	}
+	tx.Commit()
 	return u, nil
 }
 
 func (u *User) AddTag(db *gorm.DB, name string) error {
 	tag := &Tag{Name: name}
-	asn := db.Model(u).Association("Tags")
-	if err := asn.Error; err != nil {
-		return err
-	}
 	if !IsValidString(tag.Name) {
 		return errors.Errorf("Invalid tag name: %s", tag.Name)
 	}
 	if !db.Find(&Tag{}, "name = ? and user_id = ?", tag.Name, u.ID).RecordNotFound() {
 		return errors.Errorf("Tag %s is already exist", tag.Name)
 	}
-	if err := asn.Append(tag).Error; err != nil {
+	tx := db.Begin()
+	asn := tx.Model(u).Association("Tags")
+	if err := asn.Error; err != nil {
+		tx.Rollback()
 		return err
 	}
+	if err := asn.Append(tag).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
 	return nil
 }
 
@@ -220,19 +246,23 @@ func FindTagByID(db *gorm.DB, id uint) (*Tag, error) {
 }
 
 func (t *Tag) AddData(db *gorm.DB, data Data) error {
-	asn := db.Model(t).Association("SomeData")
-	if err := asn.Error; err != nil {
-		return err
-	}
 	if !utils.IsValidIPAddress(data.RemoteAddr) {
 		return errors.Errorf("Invalid ip address format: %s", data.RemoteAddr)
 	}
 	if !utils.IsValidJSON(data.Payload) {
 		return errors.Errorf("Invalid json format: %s", data.Payload)
 	}
-	if err := asn.Append(data).Error; err != nil {
+	tx := db.Begin()
+	asn := tx.Model(t).Association("SomeData")
+	if err := asn.Error; err != nil {
+		tx.Rollback()
 		return err
 	}
+	if err := asn.Append(data).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
 	return nil
 }
 
