@@ -116,7 +116,6 @@ action.addEventListener('change', (e) => {
             action.value = preval
             return
         }
-        console.log(json)
         if (json.data.length == 0) {
             alert(`データが存在しませんでした`)
             action.value = preval
@@ -134,14 +133,14 @@ action.addEventListener('change', (e) => {
         // get data in a month
         let inMonth = new Date()
         inMonth.setMonth(date.getMonth() - 1)
-        console.log(inMonth)
+
         let inMonthAry = ary.filter((v) => new Date(v.updated_at).getTime() >= inMonth.getTime() )
         let inMonthData = data.filter((v) => new Date(v.date).getTime() >= inMonth.getTime() )
 
         // get data in a week
         let inWeek = new Date()
         inWeek.setDate(date.getDate() - 7)
-        console.log(inWeek)
+
         let inWeekAry = inMonthAry.filter((v) => new Date(v.updated_at).getTime() >= inWeek.getTime() )
         let inWeekData = inMonthData.filter((v) => new Date(v.date).getTime() >= inWeek.getTime() )
 
