@@ -121,7 +121,7 @@ func DeleteUser(db *gorm.DB, userID string) (*User, error) {
 func TokenAuth(db *gorm.DB, uuid string) (*User, error) {
 	user := new(User)
 	result := db.First(user, "token = ?", uuid)
-	if err := result.Error; err != nil {
+	if err := result.Related(&user.Tags, "Tags").Error; err != nil {
 		return nil, errors.Errorf("Failed to authenticate token: %s", uuid)
 	}
 	return user, nil
