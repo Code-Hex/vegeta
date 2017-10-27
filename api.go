@@ -65,7 +65,7 @@ func (a *API) AddTag(ctx context.Context, r *protos.AddTagFromDevice) (*protos.R
 	return &protos.ResultResponse{}, nil
 }
 
-/* JSON API  */
+/* JSON API for settings */
 type apiVegetaClaims struct {
 	Name string `json:"name"`
 	jwt.StandardClaims
@@ -98,44 +98,6 @@ func RegenerateToken() echo.HandlerFunc {
 			ctx.Zap.Info("Failed to regenerate token at /regenerate", zap.Error(err))
 			return ctx.JSON(http.StatusOK, &resultJSON{
 				Reason: "トークンの更新に失敗しました",
-			})
-		}
-		return ctx.JSON(http.StatusOK, &resultJSON{
-			IsSuccess: true,
-		})
-	}
-}
-
-type addTag struct {
-	Name string `json:"tag_name" validate:"required"`
-}
-
-func AddTag() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
-		param := new(addTag)
-		if err := ctx.BindValidate(param); err != nil {
-			return err
-		}
-		token, ok := c.Get("auth_api").(*jwt.Token)
-		if !ok {
-			ctx.Zap.Info("Failed to check user has a permission")
-			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: "APIトークンにユーザーの情報がありませんでした",
-			})
-		}
-		claim := token.Claims.(*apiVegetaClaims)
-		user, err := model.FindUserByName(ctx.DB, claim.Name)
-		if err != nil {
-			ctx.Zap.Info("Failed to get user at /regenerate")
-			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: "トークンの更新に失敗しました",
-			})
-		}
-
-		if err := user.AddTag(ctx.DB, param.Name); err != nil {
-			return ctx.JSON(http.StatusOK, &resultJSON{
-				Reason: err.Error(),
 			})
 		}
 		return ctx.JSON(http.StatusOK, &resultJSON{
@@ -190,6 +152,45 @@ func ReRegisterPassword() echo.HandlerFunc {
 	}
 }
 
+/* JSON API for mypage */
+type addTag struct {
+	Name string `json:"tag_name" validate:"required"`
+}
+
+func AddTag() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.(*Context)
+		param := new(addTag)
+		if err := ctx.BindValidate(param); err != nil {
+			return err
+		}
+		token, ok := c.Get("auth_api").(*jwt.Token)
+		if !ok {
+			ctx.Zap.Info("Failed to check user has a permission")
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "APIトークンにユーザーの情報がありませんでした",
+			})
+		}
+		claim := token.Claims.(*apiVegetaClaims)
+		user, err := model.FindUserByName(ctx.DB, claim.Name)
+		if err != nil {
+			ctx.Zap.Info("Failed to get user at /regenerate")
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: "トークンの更新に失敗しました",
+			})
+		}
+
+		if err := user.AddTag(ctx.DB, param.Name); err != nil {
+			return ctx.JSON(http.StatusOK, &resultJSON{
+				Reason: err.Error(),
+			})
+		}
+		return ctx.JSON(http.StatusOK, &resultJSON{
+			IsSuccess: true,
+		})
+	}
+}
+
 type getTagsData struct {
 	TagID int `json:"tag_id" validate:"required"`
 }
@@ -224,6 +225,7 @@ func JSONTagsData() echo.HandlerFunc {
 	}
 }
 
+/* JSON API for admin */
 type createUser struct {
 	Name           string `json:"name" validate:"required"`
 	Password       string `json:"password" validate:"required"`
