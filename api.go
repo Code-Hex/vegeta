@@ -10,7 +10,9 @@ import (
 	"github.com/Code-Hex/vegeta/protos"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
+	"github.com/k0kubun/pp"
 	"github.com/labstack/echo"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -63,6 +65,63 @@ func (a *API) AddTag(ctx context.Context, r *protos.AddTagFromDevice) (*protos.R
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	return &protos.ResultResponse{}, nil
+}
+
+/* Public JSON API */
+
+type resultGetTagList struct {
+	Tags []string `json:"tags"`
+}
+
+func GetTagList() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.(*Context)
+		user, ok := ctx.Get("user").(*model.User)
+		if !ok {
+			return errors.New("Failed to get user info via context")
+		}
+		tags := make([]string, len(user.Tags), len(user.Tags))
+		for i, v := range user.Tags {
+			tags[i] = v.Name
+		}
+		return ctx.JSON(http.StatusOK, &resultGetTagList{
+			Tags: tags,
+		})
+	}
+}
+
+type getDataList struct {
+	Tag string `json:"tag" validate:"required"`
+}
+
+type resultGetDataList struct {
+	Data []model.Data `json:"data"`
+}
+
+func GetDataList() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.(*Context)
+		param := new(getDataList)
+		if err := ctx.BindValidate(param); err != nil {
+			return err
+		}
+		user, ok := ctx.Get("user").(*model.User)
+		if !ok {
+			return errors.New("Failed to get user info via context")
+		}
+		tag, err := user.FindByTagName(ctx.DB, param.Tag)
+		if err != nil {
+			return errors.Wrap(err, "Failed to get tag")
+		}
+		pp.Println(tag)
+		t, err := model.FindTagByID(ctx.DB, tag.ID)
+		if err != nil {
+			return errors.Wrap(err, "Failed to find data")
+		}
+		return ctx.JSON(http.StatusOK, &resultGetDataList{
+			Data: t.SomeData,
+		})
+	}
 }
 
 /* JSON API for settings */

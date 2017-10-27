@@ -38,6 +38,30 @@ func (v *Vegeta) registerRoutes() {
 	v.GET("/login", Login())
 	v.POST("/auth", Auth())
 
+	api := v.Group("/api")
+	api.Use(
+		func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(c echo.Context) error {
+				ctx := c.(*Context)
+				req := c.Request()
+				authScheme := "Bearer"
+				token := req.Header.Get("Authorization")
+				l := len(authScheme)
+				if len(token) > l+1 && token[:l] == authScheme {
+					user, err := model.TokenAuth(ctx.DB, token[l+1:])
+					if err != nil {
+						return errors.Wrap(err, "Failed to auth by token")
+					}
+					c.Set("user", user)
+					return next(c)
+				}
+				return errors.New("Incorrect authorization header")
+			}
+		},
+	)
+	api.POST("/data", GetDataList())
+	api.POST("/tags", GetTagList())
+
 	auth := v.Group("/mypage")
 	auth.Use(
 		func(next echo.HandlerFunc) echo.HandlerFunc {
