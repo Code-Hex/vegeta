@@ -15,6 +15,7 @@ import (
 	"github.com/Code-Hex/vegeta/model"
 	"github.com/Code-Hex/vegeta/protos"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
+	"golang.org/x/crypto/ssh/terminal"
 	validator "gopkg.in/go-playground/validator.v9"
 
 	"github.com/jinzhu/gorm"
@@ -186,6 +187,21 @@ func (v *Vegeta) prepare() error {
 		)
 		if err := r.Error; err != nil {
 			return err
+		}
+		users, err := model.GetUsers(v.DB)
+		if err != nil || len(users) == 0 {
+			fmt.Print("管理者ユーザー名を入力してください: ")
+			var name string
+			fmt.Scanln(&name)
+			fmt.Print("管理者パスワードを入力してください: ")
+			password, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+			if err != nil {
+				return err
+			}
+			fmt.Print("\n")
+			if _, err := model.CreateUser(v.DB, name, string(password), true); err != nil {
+				return err
+			}
 		}
 		return makeIgnore()
 	}
