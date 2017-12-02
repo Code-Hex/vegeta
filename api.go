@@ -10,7 +10,6 @@ import (
 	"github.com/Code-Hex/vegeta/protos"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
-	"github.com/k0kubun/pp"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -74,9 +73,8 @@ type resultGetTagList struct {
 }
 
 func GetTagList() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
-		user, ok := ctx.Get("user").(*model.User)
+	return call(func(c *Context) error {
+		user, ok := c.Get("user").(*model.User)
 		if !ok {
 			return errors.New("Failed to get user info via context")
 		}
@@ -84,10 +82,10 @@ func GetTagList() echo.HandlerFunc {
 		for i, v := range user.Tags {
 			tags[i] = v.Name
 		}
-		return ctx.JSON(http.StatusOK, &resultGetTagList{
+		return c.JSON(http.StatusOK, &resultGetTagList{
 			Tags: tags,
 		})
-	}
+	})
 }
 
 type getDataList struct {
@@ -99,29 +97,27 @@ type resultGetDataList struct {
 }
 
 func GetDataList() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
+	return call(func(c *Context) error {
 		param := new(getDataList)
-		if err := ctx.BindValidate(param); err != nil {
+		if err := c.BindValidate(param); err != nil {
 			return err
 		}
-		user, ok := ctx.Get("user").(*model.User)
+		user, ok := c.Get("user").(*model.User)
 		if !ok {
 			return errors.New("Failed to get user info via context")
 		}
-		tag, err := user.FindByTagName(ctx.DB, param.Tag)
+		tag, err := user.FindByTagName(c.DB, param.Tag)
 		if err != nil {
 			return errors.Wrap(err, "Failed to get tag")
 		}
-		pp.Println(tag)
-		t, err := model.FindTagByID(ctx.DB, tag.ID)
+		t, err := model.FindTagByID(c.DB, tag.ID)
 		if err != nil {
 			return errors.Wrap(err, "Failed to find data")
 		}
-		return ctx.JSON(http.StatusOK, &resultGetDataList{
+		return c.JSON(http.StatusOK, &resultGetDataList{
 			Data: t.SomeData,
 		})
-	}
+	})
 }
 
 /* JSON API for settings */
@@ -136,33 +132,32 @@ type resultJSON struct {
 }
 
 func RegenerateToken() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
+	return call(func(c *Context) error {
 		token, ok := c.Get("auth_api").(*jwt.Token)
 		if !ok {
-			ctx.Zap.Info("Failed to check user has a permission")
-			return ctx.JSON(http.StatusOK, &resultJSON{
+			c.Zap.Info("Failed to check user has a permission")
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: "APIトークンにユーザーの情報がありませんでした",
 			})
 		}
 		claim := token.Claims.(*apiVegetaClaims)
-		user, err := model.FindUserByName(ctx.DB, claim.Name)
+		user, err := model.FindUserByName(c.DB, claim.Name)
 		if err != nil {
-			ctx.Zap.Info("Failed to get user at /regenerate")
-			return ctx.JSON(http.StatusOK, &resultJSON{
+			c.Zap.Info("Failed to get user at /regenerate")
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: "トークンの更新に失敗しました",
 			})
 		}
-		if _, err := user.ReGenerateUserToken(ctx.DB); err != nil {
-			ctx.Zap.Info("Failed to regenerate token at /regenerate", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
+		if _, err := user.ReGenerateUserToken(c.DB); err != nil {
+			c.Zap.Info("Failed to regenerate token at /regenerate", zap.Error(err))
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: "トークンの更新に失敗しました",
 			})
 		}
-		return ctx.JSON(http.StatusOK, &resultJSON{
+		return c.JSON(http.StatusOK, &resultJSON{
 			IsSuccess: true,
 		})
-	}
+	})
 }
 
 type reregisterPassword struct {
@@ -171,44 +166,43 @@ type reregisterPassword struct {
 }
 
 func ReRegisterPassword() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
+	return call(func(c *Context) error {
 		param := new(reregisterPassword)
-		if err := ctx.BindValidate(param); err != nil {
+		if err := c.BindValidate(param); err != nil {
 			return err
 		}
 		password := param.Password
 		verifyPassword := param.VerifyPassword
 		if subtle.ConstantTimeCompare([]byte(password), []byte(verifyPassword)) != 1 {
-			return ctx.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: "入力したパスワードと確認用のパスワードが一致しませんでした。",
 			})
 		}
 		token, ok := c.Get("auth_api").(*jwt.Token)
 		if !ok {
-			ctx.Zap.Info("Failed to check user has a permission")
-			return ctx.JSON(http.StatusOK, &resultJSON{
+			c.Zap.Info("Failed to check user has a permission")
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: "ユーザーの情報がありませんでした",
 			})
 		}
 		claim := token.Claims.(*apiVegetaClaims)
-		user, err := model.FindUserByName(ctx.DB, claim.Name)
+		user, err := model.FindUserByName(c.DB, claim.Name)
 		if err != nil {
-			ctx.Zap.Info("Failed to get user at /reregister_password", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
+			c.Zap.Info("Failed to get user at /reregister_password", zap.Error(err))
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: err.Error(),
 			})
 		}
-		if _, err := user.UpdatePassword(ctx.DB, password); err != nil {
-			ctx.Zap.Info("Failed to get user at /reregister_password", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
+		if _, err := user.UpdatePassword(c.DB, password); err != nil {
+			c.Zap.Info("Failed to get user at /reregister_password", zap.Error(err))
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: err.Error(),
 			})
 		}
-		return ctx.JSON(http.StatusOK, &resultJSON{
+		return c.JSON(http.StatusOK, &resultJSON{
 			IsSuccess: true,
 		})
-	}
+	})
 }
 
 /* JSON API for mypage */
@@ -217,37 +211,36 @@ type addTag struct {
 }
 
 func AddTag() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
+	return call(func(c *Context) error {
 		param := new(addTag)
-		if err := ctx.BindValidate(param); err != nil {
+		if err := c.BindValidate(param); err != nil {
 			return err
 		}
 		token, ok := c.Get("auth_api").(*jwt.Token)
 		if !ok {
-			ctx.Zap.Info("Failed to check user has a permission")
-			return ctx.JSON(http.StatusOK, &resultJSON{
+			c.Zap.Info("Failed to check user has a permission")
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: "APIトークンにユーザーの情報がありませんでした",
 			})
 		}
 		claim := token.Claims.(*apiVegetaClaims)
-		user, err := model.FindUserByName(ctx.DB, claim.Name)
+		user, err := model.FindUserByName(c.DB, claim.Name)
 		if err != nil {
-			ctx.Zap.Info("Failed to get user at /regenerate")
-			return ctx.JSON(http.StatusOK, &resultJSON{
+			c.Zap.Info("Failed to get user at /regenerate")
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: "トークンの更新に失敗しました",
 			})
 		}
 
-		if err := user.AddTag(ctx.DB, param.Name); err != nil {
-			return ctx.JSON(http.StatusOK, &resultJSON{
+		if err := user.AddTag(c.DB, param.Name); err != nil {
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: err.Error(),
 			})
 		}
-		return ctx.JSON(http.StatusOK, &resultJSON{
+		return c.JSON(http.StatusOK, &resultJSON{
 			IsSuccess: true,
 		})
-	}
+	})
 }
 
 type getTagsData struct {
@@ -260,28 +253,27 @@ type resultGetTagsJSON struct {
 }
 
 func JSONTagsData() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
+	return call(func(c *Context) error {
 		param := new(getTagsData)
-		if err := ctx.BindValidate(param); err != nil {
+		if err := c.BindValidate(param); err != nil {
 			return err
 		}
-		tag, err := model.FindTagByID(ctx.DB, uint(param.TagID))
+		tag, err := model.FindTagByID(c.DB, uint(param.TagID))
 		if err != nil {
-			ctx.Zap.Info("Failed to get tag",
+			c.Zap.Info("Failed to get tag",
 				zap.Error(err),
 				zap.Int("tag_id", param.TagID),
 			)
-			return ctx.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: "タグが存在しませんでした",
 			})
 		}
 
-		return ctx.JSON(http.StatusOK, &resultGetTagsJSON{
+		return c.JSON(http.StatusOK, &resultGetTagsJSON{
 			IsSuccess: true,
 			Data:      tag.SomeData,
 		})
-	}
+	})
 }
 
 /* JSON API for admin */
@@ -293,32 +285,31 @@ type createUser struct {
 }
 
 func JSONCreateUser() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
+	return call(func(c *Context) error {
 		param := new(createUser)
-		if err := ctx.BindValidate(param); err != nil {
+		if err := c.BindValidate(param); err != nil {
 			return err
 		}
 
 		password := param.Password
 		verifyPassword := param.VerifyPassword
 		if subtle.ConstantTimeCompare([]byte(password), []byte(verifyPassword)) != 1 {
-			return ctx.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: "入力したパスワードと確認用のパスワードが一致しませんでした。",
 			})
 		}
 		username := param.Name
 		isAdmin := param.IsAdmin
-		if _, err := model.CreateUser(ctx.DB, username, password, isAdmin); err != nil {
-			ctx.Zap.Error("Failed to create user", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
+		if _, err := model.CreateUser(c.DB, username, password, isAdmin); err != nil {
+			c.Zap.Error("Failed to create user", zap.Error(err))
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: "ユーザー作成時にエラーが発生しました。",
 			})
 		}
-		return ctx.JSON(http.StatusOK, &resultJSON{
+		return c.JSON(http.StatusOK, &resultJSON{
 			IsSuccess: true,
 		})
-	}
+	})
 }
 
 type editUser struct {
@@ -327,25 +318,24 @@ type editUser struct {
 }
 
 func JSONEditUser() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
+	return call(func(c *Context) error {
 		editUser := new(editUser)
-		if err := ctx.BindValidate(editUser); err != nil {
+		if err := c.BindValidate(editUser); err != nil {
 			return err
 		}
 
 		userID := editUser.ID
 		isAdmin := editUser.IsAdmin
-		if _, err := model.EditUser(ctx.DB, userID, isAdmin); err != nil {
-			ctx.Zap.Error("Failed to edit user", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
+		if _, err := model.EditUser(c.DB, userID, isAdmin); err != nil {
+			c.Zap.Error("Failed to edit user", zap.Error(err))
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: "ユーザー編集時にエラーが発生しました。",
 			})
 		}
-		return ctx.JSON(http.StatusOK, &resultJSON{
+		return c.JSON(http.StatusOK, &resultJSON{
 			IsSuccess: true,
 		})
-	}
+	})
 }
 
 type deleteUser struct {
@@ -353,22 +343,21 @@ type deleteUser struct {
 }
 
 func JSONDeleteUser() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
+	return call(func(c *Context) error {
 		deleteUser := new(deleteUser)
-		if err := ctx.BindValidate(deleteUser); err != nil {
+		if err := c.BindValidate(deleteUser); err != nil {
 			return err
 		}
 
 		userID := deleteUser.ID
-		if _, err := model.DeleteUser(ctx.DB, userID); err != nil {
-			ctx.Zap.Error("Failed to delete user", zap.Error(err))
-			return ctx.JSON(http.StatusOK, &resultJSON{
+		if _, err := model.DeleteUser(c.DB, userID); err != nil {
+			c.Zap.Error("Failed to delete user", zap.Error(err))
+			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: "ユーザー削除時にエラーが発生しました。",
 			})
 		}
-		return ctx.JSON(http.StatusOK, &resultJSON{
+		return c.JSON(http.StatusOK, &resultJSON{
 			IsSuccess: true,
 		})
-	}
+	})
 }
