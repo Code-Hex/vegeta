@@ -72,19 +72,25 @@ func CreateUser(db *gorm.DB, name, password string, isAdmin bool) (*User, error)
 	return user, nil
 }
 
-func EditUser(db *gorm.DB, userID string, isAdmin bool) (*User, error) {
+func EditUser(db *gorm.DB, userID string, isAdmin bool, resetPassword string) (*User, error) {
 	id, err := strconv.ParseInt(userID, 10, 64)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to validate user-id")
-	}
-	if id == 1 {
-		return nil, errors.New("Can not edit UserID: 1")
 	}
 	user := &User{}
 	if db.First(user, id).RecordNotFound() {
 		return nil, errors.Errorf("UserID: %d is not found", id)
 	}
-	user.Admin = isAdmin
+	if id != 1 {
+		user.Admin = isAdmin
+	}
+
+	if resetPassword != "" {
+		if _, err := user.UpdatePassword(db, resetPassword); err != nil {
+			return nil, err
+		}
+		return user, nil
+	}
 
 	tx := db.Begin()
 	if err := tx.Save(user).Error; err != nil {

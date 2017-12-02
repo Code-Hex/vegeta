@@ -1,12 +1,15 @@
 package utils
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
 	"os"
 	"regexp"
+	"strconv"
 
 	uuid "github.com/satori/go.uuid"
 )
@@ -76,4 +79,10 @@ func GetIPAddress() (string, error) {
 		}
 	}
 	return "", errors.New("Failed to get ip address")
+}
+
+func RandomString() string {
+	var n uint64
+	binary.Read(rand.Reader, binary.LittleEndian, &n)
+	return strconv.FormatUint(n, 36)
 }

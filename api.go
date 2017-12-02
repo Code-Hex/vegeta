@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Code-Hex/vegeta/internal/utils"
 	"github.com/Code-Hex/vegeta/model"
 	"github.com/Code-Hex/vegeta/protos"
 	jwt "github.com/dgrijalva/jwt-go"
@@ -67,7 +68,6 @@ func (a *API) AddTag(ctx context.Context, r *protos.AddTagFromDevice) (*protos.R
 }
 
 /* Public JSON API */
-
 type resultGetTagList struct {
 	Tags []string `json:"tags"`
 }
@@ -313,8 +313,9 @@ func JSONCreateUser() echo.HandlerFunc {
 }
 
 type editUser struct {
-	ID      string `json:"id" validate:"required"`
-	IsAdmin bool   `json:"is_admin"`
+	ID              string `json:"id" validate:"required"`
+	IsAdmin         bool   `json:"is_admin"`
+	IsResetPassword bool   `json:"is_reset_password"`
 }
 
 func JSONEditUser() echo.HandlerFunc {
@@ -326,10 +327,23 @@ func JSONEditUser() echo.HandlerFunc {
 
 		userID := editUser.ID
 		isAdmin := editUser.IsAdmin
-		if _, err := model.EditUser(c.DB, userID, isAdmin); err != nil {
+		isResetPassword := editUser.IsResetPassword
+
+		var str string
+		if isResetPassword {
+			str = utils.RandomString()
+		}
+
+		if _, err := model.EditUser(c.DB, userID, isAdmin, str); err != nil {
 			c.Zap.Error("Failed to edit user", zap.Error(err))
 			return c.JSON(http.StatusOK, &resultJSON{
 				Reason: "ユーザー編集時にエラーが発生しました。",
+			})
+		}
+		if isResetPassword {
+			return c.JSON(http.StatusOK, &resultJSON{
+				IsSuccess: true,
+				Reason:    str,
 			})
 		}
 		return c.JSON(http.StatusOK, &resultJSON{

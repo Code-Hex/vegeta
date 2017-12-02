@@ -23,6 +23,8 @@ type jwtVegetaClaims struct {
 	jwt.StandardClaims
 }
 
+const authScheme = "Bearer"
+
 var secret []byte
 
 func init() {
@@ -43,7 +45,6 @@ func (v *Vegeta) registerRoutes() {
 		func(next echo.HandlerFunc) echo.HandlerFunc {
 			return call(func(c *Context) error {
 				req := c.Request()
-				authScheme := "Bearer"
 				token := req.Header.Get("Authorization")
 				l := len(authScheme)
 				if len(token) > l+1 && token[:l] == authScheme {

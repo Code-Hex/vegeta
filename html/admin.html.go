@@ -110,35 +110,39 @@ func Admin(args AdminArgs, w io.Writer) {
       <tbody>
         `)
 	for _, user := range adminArgs.Users() {
-		if user.ID > 1 {
-			_buffer.WriteString(`
+		_buffer.WriteString(`
           <tr>
             <td>`)
-			hero.FormatUint(uint64(user.ID), _buffer)
-			_buffer.WriteString(`</td>
+		hero.FormatUint(uint64(user.ID), _buffer)
+		_buffer.WriteString(`</td>
             <td>`)
-			hero.EscapeHTML(user.Name, _buffer)
-			_buffer.WriteString(`</td>
+		hero.EscapeHTML(user.Name, _buffer)
+		_buffer.WriteString(`</td>
             <td>`)
-			hero.FormatBool(user.Admin, _buffer)
-			_buffer.WriteString(`</td>
+		hero.FormatBool(user.Admin, _buffer)
+		_buffer.WriteString(`</td>
             <td align="center">
               <button type="button" class="btn btn-info" data-toggle="modal" data-target="#editModal" data-id="`)
-			hero.FormatUint(uint64(user.ID), _buffer)
-			_buffer.WriteString(`" data-name="`)
-			hero.EscapeHTML(user.Name, _buffer)
-			_buffer.WriteString(`" data-is-admin="`)
-			hero.FormatBool(user.Admin, _buffer)
-			_buffer.WriteString(`"><i class="fa fa-pencil"></i></button>
-              <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" data-id="`)
+		hero.FormatUint(uint64(user.ID), _buffer)
+		_buffer.WriteString(`" data-name="`)
+		hero.EscapeHTML(user.Name, _buffer)
+		_buffer.WriteString(`" data-is-admin="`)
+		hero.FormatBool(user.Admin, _buffer)
+		_buffer.WriteString(`"><i class="fa fa-pencil"></i></button>
+              `)
+		if user.ID > 1 {
+			_buffer.WriteString(`
+                <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" data-id="`)
 			hero.FormatUint(uint64(user.ID), _buffer)
 			_buffer.WriteString(`" data-name="`)
 			hero.EscapeHTML(user.Name, _buffer)
 			_buffer.WriteString(`"><i class="fa fa-trash"></i></button>
+              `)
+		}
+		_buffer.WriteString(`
             </td>
           </tr>
-          `)
-		}
+        `)
 	}
 	_buffer.WriteString(`
       </tbody>
@@ -200,6 +204,11 @@ func Admin(args AdminArgs, w io.Writer) {
             <div class="form-check form-check-inline">
               <label for="is-admin" class="form-check-label">
                   <input type="checkbox" name="is-admin" class="form-check-input" id="is-admin"> 管理者にする
+              </label>
+            </div>
+            <div class="form-check form-check-inline">
+              <label for="is-reset-password" class="form-check-label">
+                  <input type="checkbox" name="is-reset-password" class="form-check-input" id="is-reset-password"> パスワードをリセットする
               </label>
             </div>
           </div>

@@ -34,17 +34,17 @@
       </thead>
       <tbody>
         <% for _, user := range adminArgs.Users() { %>
-          <% if user.ID > 1 { %>
           <tr>
             <td><%==u user.ID %></td>
             <td><%= user.Name %></td>
             <td><%==b user.Admin %></td>
             <td align="center">
               <button type="button" class="btn btn-info" data-toggle="modal" data-target="#editModal" data-id="<%==u user.ID %>" data-name="<%= user.Name %>" data-is-admin="<%==b user.Admin %>"><i class="fa fa-pencil"></i></button>
-              <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" data-id="<%==u user.ID %>" data-name="<%= user.Name %>"><i class="fa fa-trash"></i></button>
+              <% if user.ID > 1 { %>
+                <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" data-id="<%==u user.ID %>" data-name="<%= user.Name %>"><i class="fa fa-trash"></i></button>
+              <% } %>
             </td>
           </tr>
-          <% } %>
         <% } %>
       </tbody>
     </table>
@@ -105,6 +105,11 @@
             <div class="form-check form-check-inline">
               <label for="is-admin" class="form-check-label">
                   <input type="checkbox" name="is-admin" class="form-check-input" id="is-admin"> 管理者にする
+              </label>
+            </div>
+            <div class="form-check form-check-inline">
+              <label for="is-reset-password" class="form-check-label">
+                  <input type="checkbox" name="is-reset-password" class="form-check-input" id="is-reset-password"> パスワードをリセットする
               </label>
             </div>
           </div>
