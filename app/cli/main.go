@@ -24,7 +24,7 @@ const (
 	version    = "0.0.1"
 	name       = "vegeta-cli"
 	msg        = name + " project to collect large amounts of vegetable data using IoT"
-	targetHost = "https://neo.ie.u-ryukyu.ac.jp/"
+	targetHost = "neo.ie.u-ryukyu.ac.jp"
 )
 
 func main() {
@@ -118,12 +118,13 @@ func (c *CLI) exec() error {
 
 func (c *CLI) setupConnection() (*grpc.ClientConn, error) {
 	// Setup grpc stub
+	var addr string
 	if isDevelopment() {
-		addr := fmt.Sprintf("localhost:%d", c.Port)
-		return grpc.Dial(addr, grpc.WithInsecure())
+		addr = fmt.Sprintf("localhost:%d", c.Port)
+	} else {
+		addr = fmt.Sprintf("%s:%d", targetHost, c.Port)
 	}
-	addr := fmt.Sprintf("%s:%d", targetHost, c.Port)
-	return grpc.Dial(addr, grpc.WithTimeout(5*time.Second))
+	return grpc.Dial(addr, grpc.WithInsecure(), grpc.WithTimeout(5*time.Second))
 }
 
 func (c *CLI) prepare() error {
