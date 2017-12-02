@@ -41,14 +41,13 @@ func (v *Vegeta) registerRoutes() {
 	api := v.Group("/api")
 	api.Use(
 		func(next echo.HandlerFunc) echo.HandlerFunc {
-			return func(c echo.Context) error {
-				ctx := c.(*Context)
+			return call(func(c *Context) error {
 				req := c.Request()
 				authScheme := "Bearer"
 				token := req.Header.Get("Authorization")
 				l := len(authScheme)
 				if len(token) > l+1 && token[:l] == authScheme {
-					user, err := model.TokenAuth(ctx.DB, token[l+1:])
+					user, err := model.TokenAuth(c.DB, token[l+1:])
 					if err != nil {
 						return errors.Wrap(err, "Failed to auth by token")
 					}
@@ -56,7 +55,7 @@ func (v *Vegeta) registerRoutes() {
 					return next(c)
 				}
 				return errors.New("Incorrect authorization header")
-			}
+			})
 		},
 	)
 	api.POST("/data", GetDataList())
@@ -78,14 +77,13 @@ func (v *Vegeta) registerRoutes() {
 			}
 		},
 		func(next echo.HandlerFunc) echo.HandlerFunc {
-			return func(c echo.Context) error {
-				ctx := c.(*Context)
-				status := ctx.GetUserStatus()
+			return call(func(c *Context) error {
+				status := c.GetUserStatus()
 				if !status.IsAuthed() {
 					return c.Redirect(http.StatusFound, "/login")
 				}
 				return next(c)
-			}
+			})
 		},
 	)
 	auth.GET("", MyPage())
@@ -111,14 +109,13 @@ func (v *Vegeta) registerRoutes() {
 	admin := auth.Group("/admin")
 	admin.Use(
 		func(next echo.HandlerFunc) echo.HandlerFunc {
-			return func(c echo.Context) error {
-				ctx := c.(*Context)
-				status := ctx.GetUserStatus()
+			return call(func(c *Context) error {
+				status := c.GetUserStatus()
 				if !status.IsAdmin() {
 					return c.Redirect(http.StatusFound, "/login")
 				}
 				return next(c)
-			}
+			})
 		},
 	)
 	admin.GET("", Admin())
@@ -151,28 +148,27 @@ func (a *adminArgs) IsCreated() bool    { return a.isCreated }
 func (a *adminArgs) Reason() string     { return a.failedReason }
 
 func Admin() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
-		s := session.Get(ctx)
+	return call(func(c *Context) error {
+		s := session.Get(c)
 		user := s.Get("user").(*model.User)
-		users, err := model.GetUsers(ctx.DB)
+		users, err := model.GetUsers(c.DB)
 		if err != nil {
-			ctx.Zap.Error("Failed to get user list", zap.Error(err))
-			return ctx.Redirect(http.StatusFound, "/mypage")
+			c.Zap.Error("Failed to get user list", zap.Error(err))
+			return c.Redirect(http.StatusFound, "/mypage")
 		}
-		token, err := ctx.CreateAPIToken(user.Name)
+		token, err := c.CreateAPIToken(user.Name)
 		if err != nil {
-			ctx.Zap.Error("Failed to create api token", zap.Error(err))
-			return ctx.Redirect(http.StatusFound, "/mypage")
+			c.Zap.Error("Failed to create api token", zap.Error(err))
+			return c.Redirect(http.StatusFound, "/mypage")
 		}
 		args := &adminArgs{
-			Args:  ctx.GetUserStatus(),
+			Args:  c.GetUserStatus(),
 			token: token,
 			users: users,
 		}
 		html.Admin(args, c.Response())
 		return nil
-	}
+	})
 }
 
 type mypageArgs struct {
@@ -185,26 +181,25 @@ func (m *mypageArgs) Token() string     { return m.token }
 func (m *mypageArgs) User() *model.User { return m.user }
 
 func MyPage() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
-		s := session.Get(ctx)
+	return call(func(c *Context) error {
+		s := session.Get(c)
 		cu := s.Get("user").(*model.User)
-		user, err := model.FindUserByName(ctx.DB, cu.Name)
+		user, err := model.FindUserByName(c.DB, cu.Name)
 		if err != nil {
 			return errors.Wrap(err, "Failed to find user")
 		}
-		t, err := ctx.CreateAPIToken(user.Name)
+		t, err := c.CreateAPIToken(user.Name)
 		if err != nil {
 			return errors.Wrap(err, "Failed to create api token at mypage")
 		}
 		args := &mypageArgs{
-			Args:  ctx.GetUserStatus(),
+			Args:  c.GetUserStatus(),
 			user:  user,
 			token: t,
 		}
-		html.MyPage(args, ctx.Response())
+		html.MyPage(args, c.Response())
 		return nil
-	}
+	})
 }
 
 type settingsArgs struct {
@@ -217,74 +212,69 @@ func (s *settingsArgs) Token() string     { return s.token }
 func (s *settingsArgs) User() *model.User { return s.user }
 
 func Settings() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
-		s := session.Get(ctx)
+	return call(func(c *Context) error {
+		s := session.Get(c)
 		cu := s.Get("user").(*model.User)
-		user, err := model.FindUserByName(ctx.DB, cu.Name)
+		user, err := model.FindUserByName(c.DB, cu.Name)
 		if err != nil {
 			return errors.Wrap(err, "Failed to find user")
 		}
-		t, err := ctx.CreateAPIToken(user.Name)
+		t, err := c.CreateAPIToken(user.Name)
 		if err != nil {
 			return errors.Wrap(err, "Failed to create api token at mypage")
 		}
 		args := &settingsArgs{
-			Args:  ctx.GetUserStatus(),
+			Args:  c.GetUserStatus(),
 			user:  user,
 			token: t,
 		}
-		html.Settings(args, ctx.Response())
+		html.Settings(args, c.Response())
 		return nil
-	}
+	})
 }
 
 func Logout() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
-		s := session.Get(ctx)
+	return call(func(c *Context) error {
+		s := session.Get(c)
 		if err := s.Expire(); err != nil {
 			return err
 		}
-		return ctx.Redirect(http.StatusFound, "/login")
-	}
+		return c.Redirect(http.StatusFound, "/login")
+	})
 }
 
 func Login() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
-		arg := ctx.GetUserStatus()
+	return call(func(c *Context) error {
+		arg := c.GetUserStatus()
 		if arg.IsAuthed() {
-			return ctx.Redirect(http.StatusFound, "/mypage")
+			return c.Redirect(http.StatusFound, "/mypage")
 		}
-		html.Login(arg, ctx.Response())
+		html.Login(arg, c.Response())
 		return nil
-	}
+	})
 }
 
 func Auth() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
-		username := ctx.FormValue("username")
-		password := ctx.FormValue("password")
-		user, err := model.BasicAuth(ctx.DB, username, password)
+	return call(func(c *Context) error {
+		username := c.FormValue("username")
+		password := c.FormValue("password")
+		user, err := model.BasicAuth(c.DB, username, password)
 		if err != nil {
-			ctx.Zap.Error("Failed to auth user", zap.String("username", username))
-			return ctx.Redirect(http.StatusFound, "/login")
+			c.Zap.Error("Failed to auth user", zap.String("username", username))
+			return c.Redirect(http.StatusFound, "/login")
 		}
-		s := session.Get(ctx)
+		s := session.Get(c)
 		s.Set("user", user)
 		if err := s.Save(); err != nil {
 			return err
 		}
-		return ctx.Redirect(http.StatusFound, "/mypage")
-	}
+		return c.Redirect(http.StatusFound, "/mypage")
+	})
 }
 
 func Index() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		ctx := c.(*Context)
-		html.Index(ctx.GetUserStatus(), ctx.Response())
+	return call(func(c *Context) error {
+		html.Index(c.GetUserStatus(), c.Response())
 		return nil
-	}
+	})
 }

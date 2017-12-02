@@ -35,6 +35,15 @@ func (v *Vegeta) NewContext(ctx echo.Context) (*Context, error) {
 	return c, nil
 }
 
+type callFunc func(c *Context) error
+
+// a tiny hack
+func call(h callFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		return h(c.(*Context))
+	}
+}
+
 func (c *Context) GetUserStatus() html.Args {
 	var isAuthed, isAdmin bool
 	s := session.Get(c)

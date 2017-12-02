@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	version = "0.0.1"
+	version = "0.0.2"
 	name    = "vegeta"
 	msg     = name + " project to collect large amounts of vegetable data using IoT"
 )
@@ -229,10 +229,7 @@ func (v *Vegeta) setupHandlers() error {
 			return h(cc)
 		}
 	})
-	v.Use(
-		v.LogHandler(),
-		middleware.Recover(),
-	)
+	v.Use(v.LogHandler(), middleware.Recover())
 
 	if isProduction() {
 		v.Use(static.ServeRoot("/assets", newAssets("assets")))
