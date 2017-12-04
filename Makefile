@@ -35,7 +35,7 @@ sass:
 
 build:
 	@go generate
-	@go build $(server)
+	go build $(server)
 
 build-cli:
 	@go build $(cli)

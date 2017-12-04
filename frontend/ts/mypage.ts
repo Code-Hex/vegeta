@@ -2,6 +2,12 @@ import * as request from 'superagent';
 import * as c3 from 'c3';
 import JSONFormatter from 'json-formatter-js';
 
+enum RenderSpan {
+    Week  = "week",
+    Month = "month",
+    All   = "all"
+}
+
 class Render {
     private _token: string = ""
     private _datePtn = /^([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}:[0-9]{2}:[0-9]{2})\+[0-9]{2}:[0-9]{2}$/
@@ -24,7 +30,7 @@ class Render {
         .set('Content-Type', 'application/json')
         .set('Authorization', `Bearer ${ this._token }`)
         .send({ tag_name: name })
-        .end(function(err, res){
+        .end(function(err, res) {
             if (err || !res.ok) {
                 alert('http error: ' + err);
             } else {
@@ -39,23 +45,34 @@ class Render {
             }
         })
     }
-
-    public DataFetch(id: Number): Promise<request.Response> {
-        let self = this
+    
+    // page numbers are like these: 0, 1, 2...
+    public DataFetch(id: Number, page: Number, span: RenderSpan): Promise<request.Response> {
         return request.post('/mypage/api/data')
         .set('Content-Type', 'application/json')
         .set('Authorization', `Bearer ${ this._token }`)
-        .send({ tag_id: id })
+        .send({
+            tag_id: id,
+            page: page,
+            span: span,
+            limit: 20
+        })
     }
 
-    public Graph(prefix: string, jsonary: any[], values: any, rawdata: any[]): void {
+    public Graph(prefix: string, rawdata: any[]): void {
+        // Get keys to render graph
+        let jsonary = rawdata.map((e) => {
+            let p = JSON.parse(e.payload)
+            let t: string = e.updated_at
+            p.date = t.replace(render.datePtn, "$1 $2")
+            return p
+        })
+        let values = Object.keys(jsonary[jsonary.length - 1])
+
         let chartTag = `#${ prefix }chart`
-        let jsonTag = `${ prefix }json`
-        // iniialize
-        let jsonDom = <HTMLInputElement>document.getElementById(jsonTag)
-        if (jsonDom.childElementCount > 0) {
-            jsonDom.removeChild(<Node>jsonDom.firstChild)
-        }
+        let jsonDom = <HTMLInputElement>document.getElementById(`${ prefix }json`)
+
+        this.InitializeDom(prefix)
 
         let chart = c3.generate({
             bindto: chartTag,
@@ -88,6 +105,18 @@ class Render {
             }
         })
     }
+
+    public InitializeDom(prefix: string): void {
+        let chartDom = <HTMLElement>document.getElementById(`${ prefix }chart`)
+        while (chartDom.firstChild) {
+            chartDom.removeChild(chartDom.firstChild)
+        }
+
+        let jsonDom = <HTMLInputElement>document.getElementById(`${ prefix }json`)
+        if (jsonDom.childElementCount > 0) {
+            jsonDom.removeChild(<Node>jsonDom.firstChild)
+        }
+    }
 }
 
 var render = new Render()
@@ -97,70 +126,80 @@ var action = <HTMLSelectElement>document.getElementById('action')
 var title = <HTMLHtmlElement>document.getElementById('tagname')
 var preval = action.value
 
-action.addEventListener('change', (e) => {
-    e.preventDefault()
-    if (action.value == "") {
-        return
+function GraphWeek(): (response: any) => void {
+    return (response: any) => {
+        render.InitializeDom('week-')
+        let json = response.body
+        if (json === undefined) return
+        if (!json.is_success) {
+            throw new Error(`直近1週間分のデータの取得に失敗しました: ${ json.reason }`)
+        }
+        if (json.data.length == 0) return
+        render.Graph('week-', json.data) // #chart
     }
-    let id = Number(action.value)
-    render.DataFetch(id)
-    .then(function(response) {
+}
+
+function GraphMonth(): (response: any) => void {
+    return (response: any) => {
+        render.InitializeDom('month-')
+        let json = response.body
+        if (json === undefined) return
+        if (!json.is_success) {
+            throw new Error(`直近1ヶ月分のデータの取得に失敗しました: ${ json.reason }`)
+        }
+        if (json.data.length == 0) return
+        render.Graph('month-', json.data) // #chart
+    }
+}
+
+function GraphAll(): (response: any) => void {
+    return (response: any) => {
+        render.InitializeDom('')
         let json = response.body
         if (json === undefined) {
-            alert(`データの取得に失敗しました`)
-            action.value = preval
-            return
+            throw new Error(`全体のデータの取得に失敗しました`)
         }
         if (!json.is_success) {
-            alert(`データの取得に失敗しました: ${ json.reason }`)
-            action.value = preval
-            return
+            throw new Error(`全体のデータの取得に失敗しました: ${ json.reason }`)
         }
         if (json.data.length == 0) {
-            alert(`データが存在しませんでした`)
-            action.value = preval
-            return
+            throw new Error(`全体のデータが存在しませんでした`)
         }
+        render.Graph('', json.data) // #chart
+    }
+}
 
-        let ary: any[] = json.data
-        let data = ary.map((e) => {
-            let p = JSON.parse(e.payload)
-            let t: string = e.updated_at
-            p.date = t.replace(render.datePtn, "$1 $2")
-            return p
-        })
+action.addEventListener('change', async (e) => {
+    e.preventDefault()
+    if (action.value == "") return
 
-        // get data in a month
-        let inMonth = new Date()
-        inMonth.setMonth(date.getMonth() - 1)
-
-        let inMonthAry = ary.filter((v) => new Date(v.updated_at).getTime() >= inMonth.getTime() )
-        let inMonthData = data.filter((v) => new Date(v.date).getTime() >= inMonth.getTime() )
-
-        // get data in a week
-        let inWeek = new Date()
-        inWeek.setDate(date.getDate() - 7)
-
-        let inWeekAry = inMonthAry.filter((v) => new Date(v.updated_at).getTime() >= inWeek.getTime() )
-        let inWeekData = inMonthData.filter((v) => new Date(v.date).getTime() >= inWeek.getTime() )
-
-        // Get keys to render graph
-        let vals = Object.keys(data[data.length - 1])
-
-        // render
-        render.Graph('week-', inWeekData, vals, inWeekAry)    // #week-chart
-        render.Graph('month-', inMonthData, vals, inMonthAry) // #month-chart
-        render.Graph('', data, vals, ary)                     // #chart
-
-        // title change
-        title.textContent = `タグ${action[action.selectedIndex].text }のグラフ`
-
-        // to restore pull down
-        preval = action.value
-    }, function(error) {
-        alert('http error: ' + error)
+    let isCaught = false
+    let id = Number(action.value)
+    await Promise.all([
+        render.DataFetch(id, 0, RenderSpan.Week).then(GraphWeek(), (e) => e),
+        render.DataFetch(id, 0, RenderSpan.Month).then(GraphMonth(), (e) => e),
+        render.DataFetch(id, 0, RenderSpan.All).then(GraphAll(), (e) => e)
+    ]).catch(function(error) {
+        alert('タグの切り替え時にエラーが発生しました\n' + error)
         action.value = preval
+        isCaught = true
     })
+
+    if (isCaught) {
+        let id = Number(preval)
+        await Promise.all([
+            render.DataFetch(id, 0, RenderSpan.Week).then(GraphWeek(), (e) => e),
+            render.DataFetch(id, 0, RenderSpan.Month).then(GraphMonth(), (e) => e),
+            render.DataFetch(id, 0, RenderSpan.All).then(GraphAll(), (e) => e)
+        ]).catch(function(error) {
+            alert('タグの復元中にエラーが発生しました\n' + error)
+        })
+        return
+    }
+
+    // title change
+    title.textContent = `タグ${action[action.selectedIndex].text }のグラフ`
+    preval = action.value // to restore pull down
 })
 
 var addTagElem = <HTMLInputElement>document.getElementById('add-tag')

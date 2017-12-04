@@ -101,7 +101,7 @@ func MyPage(args MyPageArgs, w io.Writer) {
             `)
 		for _, tag := range user.Tags {
 			_buffer.WriteString(`
-            <option value="`)
+              <option value="`)
 			hero.FormatUint(uint64(tag.ID), _buffer)
 			_buffer.WriteString(`">`)
 			hero.EscapeHTML(tag.Name, _buffer)
@@ -122,17 +122,41 @@ func MyPage(args MyPageArgs, w io.Writer) {
         <div class="col-xs-12 col-md-8"><div id="week-chart"></div></div>
         <div class="col-xs-12 col-md-4 json" id="week-json"></div>
       </div>
+      <div id="week-pagination">
+        <button class="prev btn btn-secondary">
+          <i class="fa fa-lg fa-chevron-left" aria-hidden="true"></i>
+        </button>
+        <button class="next btn btn-secondary">
+            <i class="fa fa-lg fa-chevron-right" aria-hidden="true"></i>
+        </button>
+      </div>
       <hr>
       <div class="h3 sub">直近 1 ヶ月の様子</div>
       <div class="row">
         <div class="col-xs-12 col-md-8"><div id="month-chart"></div></div>
         <div class="col-xs-12 col-md-4 json" id="month-json"></div>
       </div>
+      <div id="month-pagination">
+        <button class="prev btn btn-secondary">
+          <i class="fa fa-lg fa-chevron-left" aria-hidden="true"></i>
+        </button>
+        <button class="next btn btn-secondary">
+            <i class="fa fa-lg fa-chevron-right" aria-hidden="true"></i>
+        </button>
+      </div>
       <hr>
       <div class="h3 sub">これまでの様子</div>
       <div class="row">
         <div class="col-xs-12 col-md-8"><div id="chart"></div></div>
         <div class="col-xs-12 col-md-4 json" id="json"></div>
+      </div>
+      <div id="all-pagination">
+        <button class="prev btn btn-secondary">
+          <i class="fa fa-lg fa-chevron-left" aria-hidden="true"></i>
+        </button>
+        <button class="next btn btn-secondary">
+            <i class="fa fa-lg fa-chevron-right" aria-hidden="true"></i>
+        </button>
       </div>
     `)
 	}

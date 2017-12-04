@@ -7,7 +7,7 @@
       "dom",
       "es5",
       "scripthost",
-      "es2015.iterable"
+      "es2015"
     ],
     // "allowJs": true,                       /* Allow javascript files to be compiled. */
     // "checkJs": true,                       /* Report errors in .js files. */

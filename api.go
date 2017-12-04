@@ -22,6 +22,12 @@ type API struct {
 	DB *gorm.DB
 }
 
+const (
+	week uint = iota + 1
+	month
+	all
+)
+
 /* grpc */
 func (v *Vegeta) NewAPI() *API {
 	return &API{DB: v.DB}
@@ -89,7 +95,10 @@ func GetTagList() echo.HandlerFunc {
 }
 
 type getDataList struct {
-	Tag string `json:"tag" validate:"required"`
+	Tag   string `json:"tag" validate:"required"`
+	Span  string `json:"span" validate:"required"`
+	Limit uint   `json:"limit" validate:"required"`
+	Page  uint   `json:"page"`
 }
 
 type resultGetDataList struct {
@@ -110,12 +119,15 @@ func GetDataList() echo.HandlerFunc {
 		if err != nil {
 			return errors.Wrap(err, "Failed to get tag")
 		}
-		t, err := model.FindTagByID(c.DB, tag.ID)
+		page := param.Page
+		span := param.Span
+		limit := param.Limit
+		data, err := model.FindDataByTagID(c.DB, tag.ID, page, limit, span)
 		if err != nil {
 			return errors.Wrap(err, "Failed to find data")
 		}
 		return c.JSON(http.StatusOK, &resultGetDataList{
-			Data: t.SomeData,
+			Data: data,
 		})
 	})
 }
@@ -244,7 +256,10 @@ func AddTag() echo.HandlerFunc {
 }
 
 type getTagsData struct {
-	TagID int `json:"tag_id" validate:"required"`
+	TagID uint   `json:"tag_id" validate:"required"`
+	Span  string `json:"span" validate:"required"`
+	Limit uint   `json:"limit" validate:"required"`
+	Page  uint   `json:"page"`
 }
 
 type resultGetTagsJSON struct {
@@ -258,20 +273,24 @@ func JSONTagsData() echo.HandlerFunc {
 		if err := c.BindValidate(param); err != nil {
 			return err
 		}
-		tag, err := model.FindTagByID(c.DB, uint(param.TagID))
+		tagID := param.TagID
+		page := param.Page
+		span := param.Span
+		limit := param.Limit
+		data, err := model.FindDataByTagID(c.DB, tagID, page, limit, span)
 		if err != nil {
 			c.Zap.Info("Failed to get tag",
 				zap.Error(err),
-				zap.Int("tag_id", param.TagID),
+				zap.Uint("tag_id", param.TagID),
 			)
 			return c.JSON(http.StatusOK, &resultJSON{
-				Reason: "タグが存在しませんでした",
+				Reason: "データを取得するときにエラーが発生しました",
 			})
 		}
 
 		return c.JSON(http.StatusOK, &resultGetTagsJSON{
 			IsSuccess: true,
-			Data:      tag.SomeData,
+			Data:      data,
 		})
 	})
 }

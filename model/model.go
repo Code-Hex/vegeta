@@ -2,6 +2,7 @@ package model
 
 import (
 	"crypto/sha256"
+	"fmt"
 	"strconv"
 	"time"
 	"unicode"
@@ -14,6 +15,12 @@ import (
 
 type (
 	Users []*User
+)
+
+const (
+	week  = "week"
+	month = "month"
+	all   = "all"
 )
 
 type User struct {
@@ -249,6 +256,54 @@ func FindTagByID(db *gorm.DB, id uint) (*Tag, error) {
 		return nil, err
 	}
 	return tag, nil
+}
+
+func FindDataByTagID(db *gorm.DB, id, page, limit uint, span string) ([]Data, error) {
+	tag := new(Tag)
+	if db.First(tag, id).RecordNotFound() {
+		return nil, errors.Errorf("Tag id: %d is not found", id)
+	}
+
+	var termCondition string
+	switch span {
+	case week:
+		termCondition = "and d.updated_at > date_sub(now(), INTERVAL 1 week)\n"
+	case month:
+		termCondition = "and d.updated_at > date_sub(now(), INTERVAL 1 month)\n"
+	default: // all
+	}
+	query := fmt.Sprintf(`select
+d.id,
+d.created_at,
+d.updated_at,
+d.remote_addr,
+d.hostname,
+d.payload from data as d
+left join tags as t on d.tag_id = t.id
+where t.id = ? and d.deleted_at is null %s
+order by d.updated_at limit ? offset ?`, termCondition)
+
+	offset := page * limit
+	someData := make([]Data, 0, limit)
+	rows, err := db.Raw(query, id, limit, offset).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		data := Data{}
+		rows.Scan(
+			&data.ID,
+			&data.CreatedAt,
+			&data.UpdatedAt,
+			&data.RemoteAddr,
+			&data.Hostname,
+			&data.Payload,
+		)
+		someData = append(someData, data)
+	}
+	return someData, nil
 }
 
 func (t *Tag) AddData(db *gorm.DB, data Data) error {
