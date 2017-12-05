@@ -27,6 +27,7 @@ func MyPage(args MyPageArgs, w io.Writer) {
   `)
 	_buffer.WriteString(`
   <link rel="stylesheet" type="text/css" href="/assets/css/c3.min.css">
+  <link rel="stylesheet" type="text/css" href="/assets/css/flatpickr.min.css">
 `)
 
 	_buffer.WriteString(`
@@ -129,6 +130,9 @@ func MyPage(args MyPageArgs, w io.Writer) {
         <button class="next btn btn-secondary">
           <i class="fa fa-lg fa-chevron-right" aria-hidden="true"></i>
         </button>
+        <button class="reload btn btn-secondary">
+          <i class="fa fa-lg fa-refresh" aria-hidden="true"></i>
+        </button>
         <input id="input-week" type="range" min="1" max="200" value="50">
         <span id="input-week-value"></span>
       </div>
@@ -145,11 +149,21 @@ func MyPage(args MyPageArgs, w io.Writer) {
         <button class="next btn btn-secondary">
           <i class="fa fa-lg fa-chevron-right" aria-hidden="true"></i>
         </button>
+        <button class="reload btn btn-secondary">
+          <i class="fa fa-lg fa-refresh" aria-hidden="true"></i>
+        </button>
         <input id="input-month" type="range" min="1" max="200" value="50">
         <span id="input-month-value"></span>
       </div>
       <hr>
-      <div class="h3 sub">これまでの様子</div>
+      <div class="sub"></div>
+      <div class="row">
+        <div class="col-4 h3">全期間の様子</div>
+        <div class="col-8" style="text-align: right;">
+          <bold>表示する期間を指定 </bold>
+          <input class="calendar" type="text" placeholder="ここをクリックして期間を指定する" readonly="readonly"/>
+        </div>
+      </div>
       <div class="row">
         <div class="col-xs-12 col-md-8"><div id="chart"></div></div>
         <div class="col-xs-12 col-md-4 json" id="json"></div>
@@ -160,6 +174,9 @@ func MyPage(args MyPageArgs, w io.Writer) {
         </button>
         <button class="next btn btn-secondary">
           <i class="fa fa-lg fa-chevron-right" aria-hidden="true"></i>
+        </button>
+        <button class="reload btn btn-secondary">
+          <i class="fa fa-lg fa-refresh" aria-hidden="true"></i>
         </button>
         <input id="input-all" type="range" min="1" max="200" value="50">
         <span id="input-all-value"></span>

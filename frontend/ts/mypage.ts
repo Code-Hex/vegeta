@@ -1,5 +1,6 @@
 import * as request from 'superagent';
 import * as c3 from 'c3';
+import * as flatpickr from 'flatpickr';
 import JSONFormatter from 'json-formatter-js';
 
 enum RenderSpan {
@@ -77,15 +78,15 @@ class Render {
     }
     
     // page numbers are like these: 0, 1, 2...
-    public DataFetch(id: Number, page: Number, span: RenderSpan): Promise<request.Response> {
+    public DataFetch(id: Number, page: Number, span: RenderSpan, limit: Number): Promise<request.Response> {
         return request.post('/mypage/api/data')
         .set('Content-Type', 'application/json')
         .set('Authorization', `Bearer ${ this._token }`)
         .send({
             tag_id: id,
-            page: page,
-            span: span,
-            limit: 20
+            page:   page,
+            span:   span,
+            limit:  limit
         })
     }
 
@@ -206,37 +207,12 @@ function GraphAll(): (response: any) => void {
     }
 }
 
-action.addEventListener('change', async (e) => {
-    e.preventDefault()
-    if (action.value == "") return
+// Span
+var allSpan = <HTMLInputElement>document.querySelector('.calendar')
 
-    let id = Number(action.value)
-    await Promise.all([
-        render.DataFetch(id, 0, RenderSpan.Week).then(GraphWeek(), (e) => e),
-        render.DataFetch(id, 0, RenderSpan.Month).then(GraphMonth(), (e) => e),
-        render.DataFetch(id, 0, RenderSpan.All).then(GraphAll(), (e) => e)
-    ]).catch(function(error) {
-        alert('タグの切り替え時にエラーが発生しました\n' + error)
-        action.value = preval
-        if (prevWeek != null)  render.Graph('week-', deepCopy(prevWeek))
-        if (prevMonth != null) render.Graph('month-', deepCopy(prevMonth))
-        if (prevAll != null)   render.Graph('', deepCopy(prevAll))
-    })
-
-    // title change
-    title.textContent = `タグ${action[action.selectedIndex].text }のグラフ`
-    preval = action.value // to restore pull down
-})
-
-var addTagElem = <HTMLInputElement>document.getElementById('add-tag')
-addTagElem.addEventListener('click', (e) => {
-    e.preventDefault()
-    render.AddTag()
-})
-
-
+// Slider
 var weekSlider = <HTMLInputElement>document.getElementById('input-week')
-var weekValue = <HTMLElement>document.getElementById('input-week-value')
+var weekValue  = <HTMLElement>document.getElementById('input-week-value')
 weekValue.textContent = weekSlider.value
 weekSlider.addEventListener('input', (e) => {
     e.preventDefault()
@@ -244,7 +220,7 @@ weekSlider.addEventListener('input', (e) => {
 })
 
 var monthSlider = <HTMLInputElement>document.getElementById('input-month')
-var monthValue = <HTMLElement>document.getElementById('input-month-value')
+var monthValue  = <HTMLElement>document.getElementById('input-month-value')
 monthValue.textContent = monthSlider.value
 monthSlider.addEventListener('input', (e) => {
     e.preventDefault()
@@ -259,3 +235,224 @@ allSlider.addEventListener('input', (e) => {
     allValue.textContent = allSlider.value
 })
 
+// Pager
+interface PreFetchTrigger {
+    button: HTMLButtonElement,
+    error: Error,
+    data?: any
+}
+
+var allReload: PreFetchTrigger = {
+    button: <HTMLButtonElement>document.querySelector('#all-pagination .reload'),
+    error: new Error()
+}
+
+var allPage: number = 0
+var allPrev: PreFetchTrigger = {
+    button: <HTMLButtonElement>document.querySelector('#all-pagination .prev'),
+    error: new Error()
+}
+allPrev.button.disabled = true
+var allNext: PreFetchTrigger = {
+    button: <HTMLButtonElement>document.querySelector('#all-pagination .next'),
+    error: new Error()
+}
+
+allReload.button.addEventListener('mouseover', (e) => {
+    e.preventDefault()
+    allReload.data = null
+    let id        = Number(action.value)
+    let alllimit  = Number(allSlider.value)
+    console.log(allSpan.value)
+    render.DataFetch(id, 0, RenderSpan.All, alllimit)
+        .then((response: any) => {
+            let json = response.body
+            if (json === undefined) {
+                throw new Error(`更新すべき全体のデータの取得に失敗しました`)
+            }
+            if (!json.is_success) {
+                throw new Error(`更新すべき全体のデータの取得に失敗しました: ${ json.reason }`)
+            }
+            if (json.data.length == 0) {
+                throw new Error(`更新すべき全体のデータが存在しませんでした`)
+            }
+            allReload.data = json.data
+        })
+        .catch((e) => {
+            allReload.data = null
+            allReload.error = e
+        })
+})
+
+allReload.button.addEventListener('click', (e) => {
+    e.preventDefault()
+
+    allPage = 0
+    allPrev.button.disabled = true
+    allNext.button.disabled = false
+
+    if (allReload.data == null) {
+        alert(allReload.error)
+        return
+    }
+    render.Graph('', allReload.data)
+    window.scrollTo(0, document.documentElement.scrollTop + 200)
+})
+
+allPrev.button.addEventListener('mouseover', (e) => {
+    e.preventDefault()
+    allPrev.data = null
+    let id        = Number(action.value)
+    let alllimit  = Number(allSlider.value)
+    if (allPage > 0)
+        allPrevFetch(id, allPage - 1, RenderSpan.All, alllimit)
+})
+
+allPrev.button.addEventListener('click', (e) => {
+    e.preventDefault()
+    if (allPrev.button.disabled) return
+
+    if (allPage > 0) {
+        if (allNext.button.disabled)
+            allNext.button.disabled = false
+        allPage--
+        if (allPage == 0)
+            allPrev.button.disabled = true
+    }
+
+    if (allPrev.data == null) {
+        let id        = Number(action.value)
+        let alllimit  = Number(allSlider.value)
+        allPrevFetch(id, allPage, RenderSpan.All, alllimit)
+        if (allPrev.data == null) {
+            alert(allPrev.error)
+            return
+        }
+    }
+    render.Graph('', allPrev.data)
+    window.scrollTo(0, document.documentElement.scrollTop + 200)
+})
+
+allNext.button.addEventListener('mouseover', (e) => {
+    e.preventDefault()
+    allNext.data = null
+    let id        = Number(action.value)
+    let alllimit  = Number(allSlider.value)
+    allNextFetch(id, allPage + 1, RenderSpan.All, alllimit)
+})
+
+allNext.button.addEventListener('click', (e) => {
+    e.preventDefault()
+    if (allNext.button.disabled) return
+    
+    if (allPrev.button.disabled)
+        allPrev.button.disabled = false
+    allPage++
+
+    if (allNext.data == null) {
+        let id        = Number(action.value)
+        let alllimit  = Number(allSlider.value)
+        allNextFetch(id, allPage, RenderSpan.All, alllimit)
+        if (allNext.data == null) {
+            alert(allNext.error)
+            return
+        }
+    }
+    render.Graph('', allNext.data)
+    window.scrollTo(0, document.documentElement.scrollTop + 200)
+})
+
+function allPrevFetch(id: Number, page: Number, span: RenderSpan, limit: Number) {
+    render.DataFetch(id, page, span, limit)
+    .then((response: any) => {
+        let json = response.body
+        if (json === undefined) {
+            throw new Error(`これより以後のデータの取得に失敗しました`)
+        }
+        if (!json.is_success) {
+            throw new Error(`これより以後のデータの取得に失敗しました: ${ json.reason }`)
+        }
+        if (json.data.length == 0) {
+            allPrev.button.disabled = true
+            throw new Error(`これより以後のデータが存在しませんでした`)
+        }
+        allPrev.data = json.data
+    })
+    .catch((e) => {
+        allPrev.data = null
+        allPrev.error = e
+    })
+}
+
+function allNextFetch(id: Number, page: Number, span: RenderSpan, limit: Number) {
+    render.DataFetch(id, page, span, limit)
+    .then((response: any) => {
+        let json = response.body
+        if (json === undefined) {
+            throw new Error(`これより以前のデータの取得に失敗しました`)
+        }
+        if (!json.is_success) {
+            throw new Error(`これより以前のデータの取得に失敗しました: ${ json.reason }`)
+        }
+        if (json.data.length == 0) {
+            allNext.button.disabled = true
+            throw new Error(`これより以前のデータが存在しませんでした`)
+        }
+        allNext.data = json.data
+    })
+    .catch((e) => {
+        allNext.data = null
+        allNext.error = e
+    })
+}
+
+action.addEventListener('change', async (e) => {
+    e.preventDefault()
+    if (action.value == "") return
+
+    let id         = Number(action.value)
+    let weeklimit  = Number(weekSlider.value)
+    let monthlimit = Number(monthSlider.value)
+    let alllimit   = Number(allSlider.value)
+
+    let isCaught = false
+
+    await Promise.all([
+        render.DataFetch(id, 0, RenderSpan.Week, weeklimit).then(GraphWeek(), (e) => e),
+        render.DataFetch(id, 0, RenderSpan.Month, monthlimit).then(GraphMonth(), (e) => e),
+        render.DataFetch(id, 0, RenderSpan.All, alllimit).then(GraphAll(), (e) => e)
+    ]).catch(function(error) {
+        alert('タグの切り替え時にエラーが発生しました\n' + error)
+        isCaught = true
+        action.value = preval
+        if (prevWeek != null)  render.Graph('week-', deepCopy(prevWeek))
+        if (prevMonth != null) render.Graph('month-', deepCopy(prevMonth))
+        if (prevAll != null)   render.Graph('', deepCopy(prevAll))
+    })
+
+    if (isCaught) return
+
+    // DatePicker
+    if (prevAll.length > 0) {
+        flatpickr(allSpan, {
+            mode: 'range',
+            maxDate: 'today',
+            minDate: prevAll[0].updated_at
+        })
+    }
+
+    // initialize
+    allPage = 0
+    allNext.button.disabled = false
+    allPrev.button.disabled = true
+
+    // title change
+    title.textContent = `タグ${action[action.selectedIndex].text }のグラフ`
+    preval = action.value // to restore pull down
+})
+
+var addTagElem = <HTMLInputElement>document.getElementById('add-tag')
+addTagElem.addEventListener('click', (e) => {
+    e.preventDefault()
+    render.AddTag()
+})

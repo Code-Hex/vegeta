@@ -48,15 +48,18 @@ gulp.task('ts', function() {
 })
 
 gulp.task('js', function() {
-  var scssStream = gulp.src('js/*.js')
+  gulp.src('js/*.js')
     .pipe(plumber())
     .pipe(browserify({jquery:'jquery-browserify'}))
     .pipe(uglify())
     .pipe(gulp.dest(path.join(assetsPath, 'js/')));
 })
 
-gulp.task('c3', function() {
-  gulp.src('node_modules/c3/c3.min.css')
+gulp.task('css', function() {
+  gulp.src([
+    'node_modules/c3/c3.min.css',
+    'node_modules/flatpickr/dist/flatpickr.min.css'
+  ])
   .pipe(plumber())
   .pipe(gulp.dest(path.join(assetsPath, 'css/')));
 })

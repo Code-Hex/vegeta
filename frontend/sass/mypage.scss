@@ -30,6 +30,16 @@ $min-grid: (
   border-radius: 5px;
 }
 
+.calendar {
+  width: 270px;
+  text-align: center;
+  border: solid 1px #0275D8;
+  
+  &:focus {
+    outline: none;
+  }
+}
+
 input[type=range] {
   height: 25px;
   -webkit-appearance: none;
