@@ -194,13 +194,13 @@ function GraphAll(): (response: any) => void {
         render.InitializeDom('')
         let json = response.body
         if (json === undefined) {
-            throw new Error(`全体のデータの取得に失敗しました`)
+            throw new Error(`全期間のデータの取得に失敗しました`)
         }
         if (!json.is_success) {
-            throw new Error(`全体のデータの取得に失敗しました: ${ json.reason }`)
+            throw new Error(`全期間のデータの取得に失敗しました: ${ json.reason }`)
         }
         if (json.data.length == 0) {
-            throw new Error(`全体のデータが存在しませんでした`)
+            throw new Error(`全期間のデータが存在しませんでした`)
         }
         prevAll = json.data
         render.Graph('', json.data) // #chart
@@ -263,18 +263,17 @@ allReload.button.addEventListener('mouseover', (e) => {
     allReload.data = null
     let id        = Number(action.value)
     let alllimit  = Number(allSlider.value)
-    console.log(allSpan.value)
     render.DataFetch(id, 0, RenderSpan.All, alllimit)
         .then((response: any) => {
             let json = response.body
             if (json === undefined) {
-                throw new Error(`更新すべき全体のデータの取得に失敗しました`)
+                throw new Error(`更新すべき全期間のデータの取得に失敗しました`)
             }
             if (!json.is_success) {
-                throw new Error(`更新すべき全体のデータの取得に失敗しました: ${ json.reason }`)
+                throw new Error(`更新すべき全期間のデータの取得に失敗しました: ${ json.reason }`)
             }
             if (json.data.length == 0) {
-                throw new Error(`更新すべき全体のデータが存在しませんでした`)
+                throw new Error(`更新すべき全期間のデータが存在しませんでした`)
             }
             allReload.data = json.data
         })
@@ -321,16 +320,20 @@ allPrev.button.addEventListener('click', (e) => {
     }
 
     if (allPrev.data == null) {
-        let id        = Number(action.value)
-        let alllimit  = Number(allSlider.value)
-        allPrevFetch(id, allPage, RenderSpan.All, alllimit)
-        if (allPrev.data == null) {
-            alert(allPrev.error)
-            return
-        }
+        alert(allPrev.error)
+        return
     }
+
     render.Graph('', allPrev.data)
     window.scrollTo(0, document.documentElement.scrollTop + 200)
+    allPrev.data = null
+
+    // Prefetch
+    if (allPage > 0) {
+        let id        = Number(action.value)
+        let alllimit  = Number(allSlider.value)
+        allPrevFetch(id, allPage - 1, RenderSpan.All, alllimit)
+    }
 })
 
 allNext.button.addEventListener('mouseover', (e) => {
@@ -350,16 +353,18 @@ allNext.button.addEventListener('click', (e) => {
     allPage++
 
     if (allNext.data == null) {
-        let id        = Number(action.value)
-        let alllimit  = Number(allSlider.value)
-        allNextFetch(id, allPage, RenderSpan.All, alllimit)
-        if (allNext.data == null) {
-            alert(allNext.error)
-            return
-        }
+        alert(allNext.error)
+        return
     }
+    
     render.Graph('', allNext.data)
     window.scrollTo(0, document.documentElement.scrollTop + 200)
+    allNext.data = null
+
+    // Prefetch
+    let id        = Number(action.value)
+    let alllimit  = Number(allSlider.value)
+    allNextFetch(id, allPage + 1, RenderSpan.All, alllimit)
 })
 
 function allPrevFetch(id: Number, page: Number, span: RenderSpan, limit: Number) {
@@ -377,6 +382,7 @@ function allPrevFetch(id: Number, page: Number, span: RenderSpan, limit: Number)
             throw new Error(`これより以後のデータが存在しませんでした`)
         }
         allPrev.data = json.data
+        // console.log(allPrev.data)
     })
     .catch((e) => {
         allPrev.data = null
@@ -399,6 +405,7 @@ function allNextFetch(id: Number, page: Number, span: RenderSpan, limit: Number)
             throw new Error(`これより以前のデータが存在しませんでした`)
         }
         allNext.data = json.data
+        // console.log(allNext.data)
     })
     .catch((e) => {
         allNext.data = null
