@@ -38,6 +38,14 @@ function deepCopy(obj: any): any {
     throw new Error("Unable to copy obj! Its type isn't supported.");
 }
 
+interface FetchParam {
+    ID:       Number
+    Page:     Number
+    Limit:    Number
+    Span:     RenderSpan
+    StartAt:  string
+    EndAt:    string
+}
 
 class Render {
     private _token: string = ""
@@ -78,15 +86,17 @@ class Render {
     }
     
     // page numbers are like these: 0, 1, 2...
-    public DataFetch(id: Number, page: Number, span: RenderSpan, limit: Number): Promise<request.Response> {
+    public DataFetch(param: FetchParam): Promise<request.Response> {
         return request.post('/mypage/api/data')
         .set('Content-Type', 'application/json')
         .set('Authorization', `Bearer ${ this._token }`)
         .send({
-            tag_id: id,
-            page:   page,
-            span:   span,
-            limit:  limit
+            tag_id:   param.ID,
+            page:     param.Page,
+            span:     param.Span,
+            limit:    param.Limit,
+            start_at: param.StartAt,
+            end_at:   param.EndAt
         })
     }
 
@@ -210,6 +220,12 @@ function GraphAll(): (response: any) => void {
 // Span
 var allSpan = <HTMLInputElement>document.querySelector('.calendar')
 
+function getBetween(): string[] {
+    let sp = allSpan.value.split(' to ')
+    if (sp.length != 2) return []
+    return sp
+}
+
 // Slider
 var weekSlider = <HTMLInputElement>document.getElementById('input-week')
 var weekValue  = <HTMLElement>document.getElementById('input-week-value')
@@ -263,24 +279,35 @@ allReload.button.addEventListener('mouseover', (e) => {
     allReload.data = null
     let id        = Number(action.value)
     let alllimit  = Number(allSlider.value)
-    render.DataFetch(id, 0, RenderSpan.All, alllimit)
-        .then((response: any) => {
-            let json = response.body
-            if (json === undefined) {
-                throw new Error(`更新すべき全期間のデータの取得に失敗しました`)
-            }
-            if (!json.is_success) {
-                throw new Error(`更新すべき全期間のデータの取得に失敗しました: ${ json.reason }`)
-            }
-            if (json.data.length == 0) {
-                throw new Error(`更新すべき全期間のデータが存在しませんでした`)
-            }
-            allReload.data = json.data
-        })
-        .catch((e) => {
-            allReload.data = null
-            allReload.error = e
-        })
+
+    let calendar  = allSpan.value.split(' to ')
+    let start_at = calendar[0]
+    let end_at   = calendar[1] || ""
+    render.DataFetch({
+        ID:      id,
+        Page:    0,
+        Span:    RenderSpan.All,
+        Limit:   alllimit,
+        StartAt: start_at,
+        EndAt:   end_at
+    })
+    .then((response: any) => {
+        let json = response.body
+        if (json === undefined) {
+            throw new Error(`更新すべき全期間のデータの取得に失敗しました`)
+        }
+        if (!json.is_success) {
+            throw new Error(`更新すべき全期間のデータの取得に失敗しました: ${ json.reason }`)
+        }
+        if (json.data.length == 0) {
+            throw new Error(`更新すべき全期間のデータが存在しませんでした`)
+        }
+        allReload.data = json.data
+    })
+    .catch((e) => {
+        allReload.data = null
+        allReload.error = e
+    })
 })
 
 allReload.button.addEventListener('click', (e) => {
@@ -304,7 +331,7 @@ allPrev.button.addEventListener('mouseover', (e) => {
     let id        = Number(action.value)
     let alllimit  = Number(allSlider.value)
     if (allPage > 0)
-        allPrevFetch(id, allPage - 1, RenderSpan.All, alllimit)
+        prevFetch(allPrev, id, allPage - 1, RenderSpan.All, alllimit)
 })
 
 allPrev.button.addEventListener('click', (e) => {
@@ -332,7 +359,7 @@ allPrev.button.addEventListener('click', (e) => {
     if (allPage > 0) {
         let id        = Number(action.value)
         let alllimit  = Number(allSlider.value)
-        allPrevFetch(id, allPage - 1, RenderSpan.All, alllimit)
+        prevFetch(prevAll, id, allPage - 1, RenderSpan.All, alllimit)
     }
 })
 
@@ -341,7 +368,7 @@ allNext.button.addEventListener('mouseover', (e) => {
     allNext.data = null
     let id        = Number(action.value)
     let alllimit  = Number(allSlider.value)
-    allNextFetch(id, allPage + 1, RenderSpan.All, alllimit)
+    nextFetch(allNext, id, allPage + 1, RenderSpan.All, alllimit)
 })
 
 allNext.button.addEventListener('click', (e) => {
@@ -364,11 +391,22 @@ allNext.button.addEventListener('click', (e) => {
     // Prefetch
     let id        = Number(action.value)
     let alllimit  = Number(allSlider.value)
-    allNextFetch(id, allPage + 1, RenderSpan.All, alllimit)
+    nextFetch(allNext, id, allPage + 1, RenderSpan.All, alllimit)
 })
 
-function allPrevFetch(id: Number, page: Number, span: RenderSpan, limit: Number) {
-    render.DataFetch(id, page, span, limit)
+function prevFetch(prev: PreFetchTrigger, id: Number, page: Number, span: RenderSpan, limit: Number) {
+    let between: string[] = ['', '']
+    if (span == RenderSpan.All) {
+        between = getBetween()
+    }
+    render.DataFetch({
+        ID:      id,
+        Page:    page,
+        Span:    span,
+        Limit:   limit,
+        StartAt: between[0],
+        EndAt:   between[1]
+    })
     .then((response: any) => {
         let json = response.body
         if (json === undefined) {
@@ -378,20 +416,30 @@ function allPrevFetch(id: Number, page: Number, span: RenderSpan, limit: Number)
             throw new Error(`これより以後のデータの取得に失敗しました: ${ json.reason }`)
         }
         if (json.data.length == 0) {
-            allPrev.button.disabled = true
+            prev.button.disabled = true
             throw new Error(`これより以後のデータが存在しませんでした`)
         }
-        allPrev.data = json.data
-        // console.log(allPrev.data)
+        prev.data = json.data
     })
     .catch((e) => {
-        allPrev.data = null
-        allPrev.error = e
+        prev.data = null
+        prev.error = e
     })
 }
 
-function allNextFetch(id: Number, page: Number, span: RenderSpan, limit: Number) {
-    render.DataFetch(id, page, span, limit)
+function nextFetch(next: PreFetchTrigger, id: Number, page: Number, span: RenderSpan, limit: Number) {
+    let between: string[] = ['', '']
+    if (span == RenderSpan.All) {
+        between = getBetween()
+    }
+    render.DataFetch({
+        ID:      id,
+        Page:    page,
+        Span:    span,
+        Limit:   limit,
+        StartAt: between[0],
+        EndAt:   between[1],
+    })
     .then((response: any) => {
         let json = response.body
         if (json === undefined) {
@@ -401,15 +449,14 @@ function allNextFetch(id: Number, page: Number, span: RenderSpan, limit: Number)
             throw new Error(`これより以前のデータの取得に失敗しました: ${ json.reason }`)
         }
         if (json.data.length == 0) {
-            allNext.button.disabled = true
+            next.button.disabled = true
             throw new Error(`これより以前のデータが存在しませんでした`)
         }
-        allNext.data = json.data
-        // console.log(allNext.data)
+        next.data = json.data
     })
     .catch((e) => {
-        allNext.data = null
-        allNext.error = e
+        next.data = null
+        next.error = e
     })
 }
 
@@ -422,12 +469,37 @@ action.addEventListener('change', async (e) => {
     let monthlimit = Number(monthSlider.value)
     let alllimit   = Number(allSlider.value)
 
+    let calendar  = allSpan.value.split(' to ')
+    let start_at: string = calendar[0]
+    let end_at: string   = calendar[1] || ''
+
     let isCaught = false
 
     await Promise.all([
-        render.DataFetch(id, 0, RenderSpan.Week, weeklimit).then(GraphWeek(), (e) => e),
-        render.DataFetch(id, 0, RenderSpan.Month, monthlimit).then(GraphMonth(), (e) => e),
-        render.DataFetch(id, 0, RenderSpan.All, alllimit).then(GraphAll(), (e) => e)
+        render.DataFetch({
+            ID:      id,
+            Page:    0,
+            Span:    RenderSpan.Week,
+            Limit:   weeklimit,
+            StartAt: '',
+            EndAt:   ''
+        }).then(GraphWeek(), (e) => e),
+        render.DataFetch({
+            ID:      id,
+            Page:    0,
+            Span:    RenderSpan.Month,
+            Limit:   monthlimit,
+            StartAt: '',
+            EndAt:   ''
+        }).then(GraphMonth(), (e) => e),
+        render.DataFetch({
+            ID:      id,
+            Page:    0,
+            Span:    RenderSpan.All,
+            Limit:   alllimit,
+            StartAt: start_at,
+            EndAt:   end_at,
+        }).then(GraphAll(), (e) => e)
     ]).catch(function(error) {
         alert('タグの切り替え時にエラーが発生しました\n' + error)
         isCaught = true
@@ -440,7 +512,7 @@ action.addEventListener('change', async (e) => {
     if (isCaught) return
 
     // DatePicker
-    if (prevAll.length > 0) {
+    if (prevAll != null && prevAll.length > 0) {
         flatpickr(allSpan, {
             mode: 'range',
             maxDate: 'today',

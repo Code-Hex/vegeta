@@ -95,10 +95,12 @@ func GetTagList() echo.HandlerFunc {
 }
 
 type getDataList struct {
-	Tag   string `json:"tag" validate:"required"`
-	Span  string `json:"span" validate:"required"`
-	Limit uint   `json:"limit" validate:"required"`
-	Page  uint   `json:"page"`
+	Tag     string `json:"tag" validate:"required"`
+	Span    string `json:"span" validate:"required"`
+	Limit   uint   `json:"limit" validate:"required"`
+	Page    uint   `json:"page"`
+	StartAt string `json:"start_at"`
+	EndAt   string `json:"end_at"`
 }
 
 type resultGetDataList struct {
@@ -119,10 +121,17 @@ func GetDataList() echo.HandlerFunc {
 		if err != nil {
 			return errors.Wrap(err, "Failed to get tag")
 		}
-		page := param.Page
-		span := param.Span
-		limit := param.Limit
-		data, err := model.FindDataByTagID(c.DB, tag.ID, page, limit, span)
+
+		p := model.FindDataParam{
+			ID:      tag.ID,
+			Page:    param.Page,
+			Limit:   param.Limit,
+			Span:    param.Span,
+			StartAt: param.StartAt,
+			EndAt:   param.EndAt,
+		}
+
+		data, err := model.FindDataByTagID(c.DB, p)
 		if err != nil {
 			return errors.Wrap(err, "Failed to find data")
 		}
@@ -256,10 +265,12 @@ func AddTag() echo.HandlerFunc {
 }
 
 type getTagsData struct {
-	TagID uint   `json:"tag_id" validate:"required"`
-	Span  string `json:"span" validate:"required"`
-	Limit uint   `json:"limit" validate:"required"`
-	Page  uint   `json:"page"`
+	TagID   uint   `json:"tag_id" validate:"required"`
+	Span    string `json:"span" validate:"required"`
+	Limit   uint   `json:"limit" validate:"required"`
+	Page    uint   `json:"page"`
+	StartAt string `json:"start_at"`
+	EndAt   string `json:"end_at"`
 }
 
 type resultGetTagsJSON struct {
@@ -273,11 +284,17 @@ func JSONTagsData() echo.HandlerFunc {
 		if err := c.BindValidate(param); err != nil {
 			return err
 		}
-		tagID := param.TagID
-		page := param.Page
-		span := param.Span
-		limit := param.Limit
-		data, err := model.FindDataByTagID(c.DB, tagID, page, limit, span)
+
+		p := model.FindDataParam{
+			ID:      param.TagID,
+			Page:    param.Page,
+			Span:    param.Span,
+			Limit:   param.Limit,
+			StartAt: param.StartAt,
+			EndAt:   param.EndAt,
+		}
+
+		data, err := model.FindDataByTagID(c.DB, p)
 		if err != nil {
 			c.Zap.Info("Failed to get tag",
 				zap.Error(err),
