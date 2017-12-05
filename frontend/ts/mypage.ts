@@ -258,6 +258,284 @@ interface PreFetchTrigger {
     data?: any
 }
 
+//
+// WEEK
+//
+
+var weekReload: PreFetchTrigger = {
+    button: <HTMLButtonElement>document.querySelector('#week-pagination .reload'),
+    error: new Error()
+}
+
+var weekPage: number = 0
+var weekPrev: PreFetchTrigger = {
+    button: <HTMLButtonElement>document.querySelector('#week-pagination .prev'),
+    error: new Error()
+}
+weekPrev.button.disabled = true
+var weekNext: PreFetchTrigger = {
+    button: <HTMLButtonElement>document.querySelector('#week-pagination .next'),
+    error: new Error()
+}
+
+weekReload.button.addEventListener('mouseover', (e) => {
+    e.preventDefault()
+    weekReload.data = null
+    let id        = Number(action.value)
+    let weeklimit  = Number(weekSlider.value)
+
+    render.DataFetch({
+        ID:      id,
+        Page:    0,
+        Span:    RenderSpan.Week,
+        Limit:   weeklimit,
+        StartAt: '',
+        EndAt:   ''
+    })
+    .then((response: any) => {
+        let json = response.body
+        if (json === undefined) {
+            throw new Error(`更新すべき全期間のデータの取得に失敗しました`)
+        }
+        if (!json.is_success) {
+            throw new Error(`更新すべき全期間のデータの取得に失敗しました: ${ json.reason }`)
+        }
+        if (json.data.length == 0) {
+            throw new Error(`更新すべき全期間のデータが存在しませんでした`)
+        }
+        weekReload.data = json.data
+    })
+    .catch((e) => {
+        weekReload.data = null
+        weekReload.error = e
+    })
+})
+
+weekReload.button.addEventListener('click', (e) => {
+    e.preventDefault()
+
+    weekPage = 0
+    weekPrev.button.disabled = true
+    weekNext.button.disabled = false
+
+    if (weekReload.data == null) {
+        alert(weekReload.error)
+        return
+    }
+    render.Graph('week-', weekReload.data)
+    window.scrollTo(0, 0)
+})
+
+weekPrev.button.addEventListener('mouseover', (e) => {
+    e.preventDefault()
+    weekPrev.data = null
+    let id        = Number(action.value)
+    let weeklimit  = Number(weekSlider.value)
+    if (weekPage > 0)
+        prevFetch(weekPrev, id, weekPage - 1, RenderSpan.Week, weeklimit)
+})
+
+weekPrev.button.addEventListener('click', (e) => {
+    e.preventDefault()
+    if (weekPrev.button.disabled) return
+
+    if (weekPage > 0) {
+        if (weekNext.button.disabled)
+            weekNext.button.disabled = false
+        weekPage--
+        if (weekPage == 0)
+            weekPrev.button.disabled = true
+    }
+
+    if (weekPrev.data == null) {
+        alert(weekPrev.error)
+        return
+    }
+
+    render.Graph('week-', weekPrev.data)
+    window.scrollTo(0, 0)
+    weekPrev.data = null
+
+    // Prefetch
+    if (weekPage > 0) {
+        let id        = Number(action.value)
+        let weeklimit  = Number(weekSlider.value)
+        prevFetch(weekPrev, id, weekPage - 1, RenderSpan.Week, weeklimit)
+    }
+})
+
+weekNext.button.addEventListener('mouseover', (e) => {
+    e.preventDefault()
+    weekNext.data = null
+    let id        = Number(action.value)
+    let weeklimit  = Number(weekSlider.value)
+    nextFetch(weekNext, id, weekPage + 1, RenderSpan.Week, weeklimit)
+})
+
+weekNext.button.addEventListener('click', (e) => {
+    e.preventDefault()
+    if (weekNext.button.disabled) return
+    
+    if (weekPrev.button.disabled)
+        weekPrev.button.disabled = false
+    weekPage++
+
+    if (weekNext.data == null) {
+        alert(weekNext.error)
+        return
+    }
+    
+    render.Graph('week-', weekNext.data)
+    window.scrollTo(0, 0)
+    weekNext.data = null
+
+    // Prefetch
+    let id        = Number(action.value)
+    let weeklimit  = Number(weekSlider.value)
+    nextFetch(weekNext, id, weekPage + 1, RenderSpan.Week, weeklimit)
+})
+
+//
+// MONTH
+//
+
+var monthReload: PreFetchTrigger = {
+    button: <HTMLButtonElement>document.querySelector('#month-pagination .reload'),
+    error: new Error()
+}
+
+var monthPage: number = 0
+var monthPrev: PreFetchTrigger = {
+    button: <HTMLButtonElement>document.querySelector('#month-pagination .prev'),
+    error: new Error()
+}
+monthPrev.button.disabled = true
+var monthNext: PreFetchTrigger = {
+    button: <HTMLButtonElement>document.querySelector('#month-pagination .next'),
+    error: new Error()
+}
+
+monthReload.button.addEventListener('mouseover', (e) => {
+    e.preventDefault()
+    monthReload.data = null
+    let id        = Number(action.value)
+    let monthlimit  = Number(monthSlider.value)
+
+    render.DataFetch({
+        ID:      id,
+        Page:    0,
+        Span:    RenderSpan.Month,
+        Limit:   monthlimit,
+        StartAt: '',
+        EndAt:   ''
+    })
+    .then((response: any) => {
+        let json = response.body
+        if (json === undefined) {
+            throw new Error(`更新すべき全期間のデータの取得に失敗しました`)
+        }
+        if (!json.is_success) {
+            throw new Error(`更新すべき全期間のデータの取得に失敗しました: ${ json.reason }`)
+        }
+        if (json.data.length == 0) {
+            throw new Error(`更新すべき全期間のデータが存在しませんでした`)
+        }
+        monthReload.data = json.data
+    })
+    .catch((e) => {
+        monthReload.data = null
+        monthReload.error = e
+    })
+})
+
+monthReload.button.addEventListener('click', (e) => {
+    e.preventDefault()
+
+    monthPage = 0
+    monthPrev.button.disabled = true
+    monthNext.button.disabled = false
+
+    if (monthReload.data == null) {
+        alert(monthReload.error)
+        return
+    }
+    render.Graph('month-', monthReload.data)
+    window.scrollTo(0, 510)
+})
+
+monthPrev.button.addEventListener('mouseover', (e) => {
+    e.preventDefault()
+    monthPrev.data = null
+    let id        = Number(action.value)
+    let monthlimit  = Number(monthSlider.value)
+    if (monthPage > 0)
+        prevFetch(monthPrev, id, monthPage - 1, RenderSpan.Month, monthlimit)
+})
+
+monthPrev.button.addEventListener('click', (e) => {
+    e.preventDefault()
+    if (monthPrev.button.disabled) return
+
+    if (monthPage > 0) {
+        if (monthNext.button.disabled)
+            monthNext.button.disabled = false
+        monthPage--
+        if (monthPage == 0)
+            monthPrev.button.disabled = true
+    }
+
+    if (monthPrev.data == null) {
+        alert(monthPrev.error)
+        return
+    }
+
+    render.Graph('month-', monthPrev.data)
+    window.scrollTo(0, 510)
+    monthPrev.data = null
+
+    // Prefetch
+    if (monthPage > 0) {
+        let id        = Number(action.value)
+        let monthlimit  = Number(monthSlider.value)
+        prevFetch(monthPrev, id, monthPage - 1, RenderSpan.Month, monthlimit)
+    }
+})
+
+monthNext.button.addEventListener('mouseover', (e) => {
+    e.preventDefault()
+    monthNext.data = null
+    let id        = Number(action.value)
+    let monthlimit  = Number(monthSlider.value)
+    nextFetch(monthNext, id, monthPage + 1, RenderSpan.Month, monthlimit)
+})
+
+monthNext.button.addEventListener('click', (e) => {
+    e.preventDefault()
+    if (monthNext.button.disabled) return
+    
+    if (monthPrev.button.disabled)
+        monthPrev.button.disabled = false
+    monthPage++
+
+    if (monthNext.data == null) {
+        alert(monthNext.error)
+        return
+    }
+    
+    render.Graph('month-', monthNext.data)
+    window.scrollTo(0, 510)
+    monthNext.data = null
+
+    // Prefetch
+    let id        = Number(action.value)
+    let monthlimit  = Number(monthSlider.value)
+    nextFetch(monthNext, id, monthPage + 1, RenderSpan.Month, monthlimit)
+})
+
+//
+// ALL
+//
+
 var allReload: PreFetchTrigger = {
     button: <HTMLButtonElement>document.querySelector('#all-pagination .reload'),
     error: new Error()
@@ -322,7 +600,7 @@ allReload.button.addEventListener('click', (e) => {
         return
     }
     render.Graph('', allReload.data)
-    window.scrollTo(0, document.documentElement.scrollTop + 200)
+    window.scrollTo(0, document.documentElement.scrollHeight)
 })
 
 allPrev.button.addEventListener('mouseover', (e) => {
@@ -352,7 +630,7 @@ allPrev.button.addEventListener('click', (e) => {
     }
 
     render.Graph('', allPrev.data)
-    window.scrollTo(0, document.documentElement.scrollTop + 200)
+    window.scrollTo(0, document.documentElement.scrollHeight)
     allPrev.data = null
 
     // Prefetch
@@ -385,7 +663,7 @@ allNext.button.addEventListener('click', (e) => {
     }
     
     render.Graph('', allNext.data)
-    window.scrollTo(0, document.documentElement.scrollTop + 200)
+    window.scrollTo(0, document.documentElement.scrollHeight)
     allNext.data = null
 
     // Prefetch
