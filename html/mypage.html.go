@@ -127,8 +127,10 @@ func MyPage(args MyPageArgs, w io.Writer) {
           <i class="fa fa-lg fa-chevron-left" aria-hidden="true"></i>
         </button>
         <button class="next btn btn-secondary">
-            <i class="fa fa-lg fa-chevron-right" aria-hidden="true"></i>
+          <i class="fa fa-lg fa-chevron-right" aria-hidden="true"></i>
         </button>
+        <input id="input-week" type="range" min="1" max="200" value="50">
+        <span id="input-week-value"></span>
       </div>
       <hr>
       <div class="h3 sub">直近 1 ヶ月の様子</div>
@@ -141,8 +143,10 @@ func MyPage(args MyPageArgs, w io.Writer) {
           <i class="fa fa-lg fa-chevron-left" aria-hidden="true"></i>
         </button>
         <button class="next btn btn-secondary">
-            <i class="fa fa-lg fa-chevron-right" aria-hidden="true"></i>
+          <i class="fa fa-lg fa-chevron-right" aria-hidden="true"></i>
         </button>
+        <input id="input-month" type="range" min="1" max="200" value="50">
+        <span id="input-month-value"></span>
       </div>
       <hr>
       <div class="h3 sub">これまでの様子</div>
@@ -155,8 +159,10 @@ func MyPage(args MyPageArgs, w io.Writer) {
           <i class="fa fa-lg fa-chevron-left" aria-hidden="true"></i>
         </button>
         <button class="next btn btn-secondary">
-            <i class="fa fa-lg fa-chevron-right" aria-hidden="true"></i>
+          <i class="fa fa-lg fa-chevron-right" aria-hidden="true"></i>
         </button>
+        <input id="input-all" type="range" min="1" max="200" value="50">
+        <span id="input-all-value"></span>
       </div>
     `)
 	}

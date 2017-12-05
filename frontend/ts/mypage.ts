@@ -8,6 +8,36 @@ enum RenderSpan {
     All   = "all"
 }
 
+function deepCopy(obj: any): any {
+    var copy: any;
+    // Handle the 3 simple types, and null or undefined
+    if (null == obj || "object" != typeof obj) return obj;
+    // Handle Date
+    if (obj instanceof Date) {
+        copy = new Date();
+        copy.setTime(obj.getTime());
+        return copy;
+    }
+    // Handle Array
+    if (obj instanceof Array) {
+        copy = [];
+        for (var i = 0, len = obj.length; i < len; i++) {
+            copy[i] = deepCopy(obj[i]);
+        }
+        return copy;
+    }
+    // Handle Object
+    if (obj instanceof Object) {
+        copy = {};
+        for (var attr in obj) {
+            if (obj.hasOwnProperty(attr)) copy[attr] = deepCopy(obj[attr]);
+        }
+        return copy;
+    }
+    throw new Error("Unable to copy obj! Its type isn't supported.");
+}
+
+
 class Render {
     private _token: string = ""
     private _datePtn = /^([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}:[0-9]{2}:[0-9]{2})\+[0-9]{2}:[0-9]{2}$/
@@ -126,6 +156,10 @@ var action = <HTMLSelectElement>document.getElementById('action')
 var title = <HTMLHtmlElement>document.getElementById('tagname')
 var preval = action.value
 
+var prevWeek: any,
+    prevMonth: any,
+    prevAll: any
+
 function GraphWeek(): (response: any) => void {
     return (response: any) => {
         render.InitializeDom('week-')
@@ -135,6 +169,7 @@ function GraphWeek(): (response: any) => void {
             throw new Error(`直近1週間分のデータの取得に失敗しました: ${ json.reason }`)
         }
         if (json.data.length == 0) return
+        prevWeek = json.data
         render.Graph('week-', json.data) // #chart
     }
 }
@@ -148,6 +183,7 @@ function GraphMonth(): (response: any) => void {
             throw new Error(`直近1ヶ月分のデータの取得に失敗しました: ${ json.reason }`)
         }
         if (json.data.length == 0) return
+        prevMonth = json.data
         render.Graph('month-', json.data) // #chart
     }
 }
@@ -165,6 +201,7 @@ function GraphAll(): (response: any) => void {
         if (json.data.length == 0) {
             throw new Error(`全体のデータが存在しませんでした`)
         }
+        prevAll = json.data
         render.Graph('', json.data) // #chart
     }
 }
@@ -173,7 +210,6 @@ action.addEventListener('change', async (e) => {
     e.preventDefault()
     if (action.value == "") return
 
-    let isCaught = false
     let id = Number(action.value)
     await Promise.all([
         render.DataFetch(id, 0, RenderSpan.Week).then(GraphWeek(), (e) => e),
@@ -182,20 +218,10 @@ action.addEventListener('change', async (e) => {
     ]).catch(function(error) {
         alert('タグの切り替え時にエラーが発生しました\n' + error)
         action.value = preval
-        isCaught = true
+        if (prevWeek != null)  render.Graph('week-', deepCopy(prevWeek))
+        if (prevMonth != null) render.Graph('month-', deepCopy(prevMonth))
+        if (prevAll != null)   render.Graph('', deepCopy(prevAll))
     })
-
-    if (isCaught) {
-        let id = Number(preval)
-        await Promise.all([
-            render.DataFetch(id, 0, RenderSpan.Week).then(GraphWeek(), (e) => e),
-            render.DataFetch(id, 0, RenderSpan.Month).then(GraphMonth(), (e) => e),
-            render.DataFetch(id, 0, RenderSpan.All).then(GraphAll(), (e) => e)
-        ]).catch(function(error) {
-            alert('タグの復元中にエラーが発生しました\n' + error)
-        })
-        return
-    }
 
     // title change
     title.textContent = `タグ${action[action.selectedIndex].text }のグラフ`
@@ -206,5 +232,30 @@ var addTagElem = <HTMLInputElement>document.getElementById('add-tag')
 addTagElem.addEventListener('click', (e) => {
     e.preventDefault()
     render.AddTag()
+})
+
+
+var weekSlider = <HTMLInputElement>document.getElementById('input-week')
+var weekValue = <HTMLElement>document.getElementById('input-week-value')
+weekValue.textContent = weekSlider.value
+weekSlider.addEventListener('input', (e) => {
+    e.preventDefault()
+    weekValue.textContent = weekSlider.value
+})
+
+var monthSlider = <HTMLInputElement>document.getElementById('input-month')
+var monthValue = <HTMLElement>document.getElementById('input-month-value')
+monthValue.textContent = monthSlider.value
+monthSlider.addEventListener('input', (e) => {
+    e.preventDefault()
+    monthValue.textContent = monthSlider.value
+})
+
+var allSlider = <HTMLInputElement>document.getElementById('input-all')
+var allValue = <HTMLElement>document.getElementById('input-all-value')
+allValue.textContent = allSlider.value
+allSlider.addEventListener('input', (e) => {
+    e.preventDefault()
+    allValue.textContent = allSlider.value
 })
 
