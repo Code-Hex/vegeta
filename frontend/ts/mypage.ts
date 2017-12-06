@@ -167,9 +167,9 @@ var action = <HTMLSelectElement>document.getElementById('action')
 var title = <HTMLHtmlElement>document.getElementById('tagname')
 var preval = action.value
 
-var prevWeek: any,
-    prevMonth: any,
-    prevAll: any
+var prevWeekdata: any,
+    prevMonthdata: any,
+    prevAlldata: any
 
 function GraphWeek(): (response: any) => void {
     return (response: any) => {
@@ -180,7 +180,7 @@ function GraphWeek(): (response: any) => void {
             throw new Error(`直近1週間分のデータの取得に失敗しました: ${ json.reason }`)
         }
         if (json.data.length == 0) return
-        prevWeek = json.data
+        prevWeekdata = json.data
         render.Graph('week-', json.data) // #chart
     }
 }
@@ -194,7 +194,7 @@ function GraphMonth(): (response: any) => void {
             throw new Error(`直近1ヶ月分のデータの取得に失敗しました: ${ json.reason }`)
         }
         if (json.data.length == 0) return
-        prevMonth = json.data
+        prevMonthdata = json.data
         render.Graph('month-', json.data) // #chart
     }
 }
@@ -212,7 +212,7 @@ function GraphAll(): (response: any) => void {
         if (json.data.length == 0) {
             throw new Error(`全期間のデータが存在しませんでした`)
         }
-        prevAll = json.data
+        prevAlldata = json.data
         render.Graph('', json.data) // #chart
     }
 }
@@ -261,6 +261,8 @@ interface PreFetchTrigger {
 //
 // WEEK
 //
+
+const weekScroll = 100
 
 var weekReload: PreFetchTrigger = {
     button: <HTMLButtonElement>document.querySelector('#week-pagination .reload'),
@@ -312,7 +314,7 @@ weekReload.button.addEventListener('mouseover', (e) => {
 })
 
 weekReload.button.addEventListener('click', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
 
     weekPage = 0
     weekPrev.button.disabled = true
@@ -323,81 +325,84 @@ weekReload.button.addEventListener('click', (e) => {
         return
     }
     render.Graph('week-', weekReload.data)
-    window.scrollTo(0, 0)
+    window.scrollTo(0, weekScroll)
 })
 
 weekPrev.button.addEventListener('mouseover', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
     weekPrev.data = null
-    let id        = Number(action.value)
-    let weeklimit  = Number(weekSlider.value)
-    if (weekPage > 0)
-        prevFetch(weekPrev, id, weekPage - 1, RenderSpan.Week, weeklimit)
+    prevFetch(weekPrev, weekPage - 1, RenderSpan.Week)
 })
 
 weekPrev.button.addEventListener('click', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
     if (weekPrev.button.disabled) return
 
-    if (weekPage > 0) {
-        if (weekNext.button.disabled)
-            weekNext.button.disabled = false
-        weekPage--
-        if (weekPage == 0)
-            weekPrev.button.disabled = true
+    if (weekPrev.data == null) {
+        if (weekPrev.error.message != '') {
+            alert(weekPrev.error)
+            return
+        }
+        // Prefetch
+        prevFetch(weekPrev, weekPage - 1, RenderSpan.Week)
+        return
     }
 
-    if (weekPrev.data == null) {
-        alert(weekPrev.error)
-        return
+    if (weekNext.button.disabled)
+        weekNext.button.disabled = false
+
+    weekPage--
+
+    if (weekPage <= 0) {
+        weekPage = 0
+        weekPrev.button.disabled = true
     }
 
     render.Graph('week-', weekPrev.data)
-    window.scrollTo(0, 0)
+    window.scrollTo(0, weekScroll)
     weekPrev.data = null
 
     // Prefetch
-    if (weekPage > 0) {
-        let id        = Number(action.value)
-        let weeklimit  = Number(weekSlider.value)
-        prevFetch(weekPrev, id, weekPage - 1, RenderSpan.Week, weeklimit)
-    }
+    prevFetch(weekPrev, weekPage - 1, RenderSpan.Week)
 })
 
 weekNext.button.addEventListener('mouseover', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
     weekNext.data = null
-    let id        = Number(action.value)
-    let weeklimit  = Number(weekSlider.value)
-    nextFetch(weekNext, id, weekPage + 1, RenderSpan.Week, weeklimit)
+    nextFetch(weekNext, weekPage + 1, RenderSpan.Week)
 })
 
 weekNext.button.addEventListener('click', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
     if (weekNext.button.disabled) return
-    
+
     if (weekPrev.button.disabled)
         weekPrev.button.disabled = false
-    weekPage++
 
     if (weekNext.data == null) {
-        alert(weekNext.error)
+        if (weekNext.error.message != '') {
+            alert(weekNext.error)
+            return
+        }
+        // Prefetch
+        nextFetch(weekNext, weekPage + 1, RenderSpan.Week)
         return
     }
+    weekPage++
     
     render.Graph('week-', weekNext.data)
-    window.scrollTo(0, 0)
+    window.scrollTo(0, weekScroll)
     weekNext.data = null
 
     // Prefetch
-    let id        = Number(action.value)
-    let weeklimit  = Number(weekSlider.value)
-    nextFetch(weekNext, id, weekPage + 1, RenderSpan.Week, weeklimit)
+    nextFetch(weekNext, weekPage + 1, RenderSpan.Week)
 })
 
 //
 // MONTH
 //
+
+const monthScroll = document.documentElement.scrollHeight / 2 + 160
 
 var monthReload: PreFetchTrigger = {
     button: <HTMLButtonElement>document.querySelector('#month-pagination .reload'),
@@ -416,7 +421,7 @@ var monthNext: PreFetchTrigger = {
 }
 
 monthReload.button.addEventListener('mouseover', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
     monthReload.data = null
     let id        = Number(action.value)
     let monthlimit  = Number(monthSlider.value)
@@ -449,7 +454,7 @@ monthReload.button.addEventListener('mouseover', (e) => {
 })
 
 monthReload.button.addEventListener('click', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
 
     monthPage = 0
     monthPrev.button.disabled = true
@@ -460,81 +465,84 @@ monthReload.button.addEventListener('click', (e) => {
         return
     }
     render.Graph('month-', monthReload.data)
-    window.scrollTo(0, 510)
+    window.scrollTo(0, monthScroll)
 })
 
 monthPrev.button.addEventListener('mouseover', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
     monthPrev.data = null
-    let id        = Number(action.value)
-    let monthlimit  = Number(monthSlider.value)
-    if (monthPage > 0)
-        prevFetch(monthPrev, id, monthPage - 1, RenderSpan.Month, monthlimit)
+    prevFetch(monthPrev, monthPage - 1, RenderSpan.Month)
 })
 
 monthPrev.button.addEventListener('click', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
     if (monthPrev.button.disabled) return
 
-    if (monthPage > 0) {
-        if (monthNext.button.disabled)
-            monthNext.button.disabled = false
-        monthPage--
-        if (monthPage == 0)
-            monthPrev.button.disabled = true
+    if (monthPrev.data == null) {
+        if (monthPrev.error.message != '') {
+            alert(monthPrev.error)
+            return
+        }
+        // Prefetch
+        prevFetch(monthPrev, monthPage - 1, RenderSpan.Month)
+        return
     }
 
-    if (monthPrev.data == null) {
-        alert(monthPrev.error)
-        return
+    if (monthNext.button.disabled)
+        monthNext.button.disabled = false
+
+    monthPage--
+
+    if (monthPage <= 0) {
+        monthPage = 0
+        monthPrev.button.disabled = true
     }
 
     render.Graph('month-', monthPrev.data)
-    window.scrollTo(0, 510)
+    window.scrollTo(0, monthScroll)
     monthPrev.data = null
 
     // Prefetch
-    if (monthPage > 0) {
-        let id        = Number(action.value)
-        let monthlimit  = Number(monthSlider.value)
-        prevFetch(monthPrev, id, monthPage - 1, RenderSpan.Month, monthlimit)
-    }
+    prevFetch(monthPrev, monthPage - 1, RenderSpan.Month)
 })
 
 monthNext.button.addEventListener('mouseover', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
     monthNext.data = null
-    let id        = Number(action.value)
-    let monthlimit  = Number(monthSlider.value)
-    nextFetch(monthNext, id, monthPage + 1, RenderSpan.Month, monthlimit)
+    nextFetch(monthNext, monthPage + 1, RenderSpan.Month)
 })
 
 monthNext.button.addEventListener('click', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
     if (monthNext.button.disabled) return
-    
+
     if (monthPrev.button.disabled)
         monthPrev.button.disabled = false
-    monthPage++
 
     if (monthNext.data == null) {
-        alert(monthNext.error)
+        if (monthNext.error.message != '') {
+            alert(monthNext.error)
+            return
+        }
+        // Prefetch
+        nextFetch(monthNext, monthPage + 1, RenderSpan.Month)
         return
     }
+    monthPage++
     
     render.Graph('month-', monthNext.data)
-    window.scrollTo(0, 510)
+    window.scrollTo(0, monthScroll)
     monthNext.data = null
 
     // Prefetch
-    let id        = Number(action.value)
-    let monthlimit  = Number(monthSlider.value)
-    nextFetch(monthNext, id, monthPage + 1, RenderSpan.Month, monthlimit)
+    nextFetch(monthNext, monthPage + 1, RenderSpan.Month)
 })
 
 //
 // ALL
 //
+
+const allScroll = document.documentElement.scrollHeight + 180
 
 var allReload: PreFetchTrigger = {
     button: <HTMLButtonElement>document.querySelector('#all-pagination .reload'),
@@ -553,7 +561,7 @@ var allNext: PreFetchTrigger = {
 }
 
 allReload.button.addEventListener('mouseover', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
     allReload.data = null
     let id        = Number(action.value)
     let alllimit  = Number(allSlider.value)
@@ -589,7 +597,7 @@ allReload.button.addEventListener('mouseover', (e) => {
 })
 
 allReload.button.addEventListener('click', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
 
     allPage = 0
     allPrev.button.disabled = true
@@ -600,83 +608,89 @@ allReload.button.addEventListener('click', (e) => {
         return
     }
     render.Graph('', allReload.data)
-    window.scrollTo(0, document.documentElement.scrollHeight)
+    window.scrollTo(0, allScroll)
 })
 
 allPrev.button.addEventListener('mouseover', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
     allPrev.data = null
-    let id        = Number(action.value)
-    let alllimit  = Number(allSlider.value)
-    if (allPage > 0)
-        prevFetch(allPrev, id, allPage - 1, RenderSpan.All, alllimit)
+    prevFetch(allPrev, allPage - 1, RenderSpan.All)
 })
 
 allPrev.button.addEventListener('click', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
     if (allPrev.button.disabled) return
 
-    if (allPage > 0) {
-        if (allNext.button.disabled)
-            allNext.button.disabled = false
-        allPage--
-        if (allPage == 0)
-            allPrev.button.disabled = true
+    if (allPrev.data == null) {
+        if (allPrev.error.message != '') {
+            alert(allPrev.error)
+            return
+        }
+        // Prefetch
+        prevFetch(allPrev, allPage - 1, RenderSpan.All)
+        return
     }
 
-    if (allPrev.data == null) {
-        alert(allPrev.error)
-        return
+    if (allNext.button.disabled)
+        allNext.button.disabled = false
+
+    allPage--
+
+    if (allPage <= 0) {
+        allPage = 0
+        allPrev.button.disabled = true
     }
 
     render.Graph('', allPrev.data)
-    window.scrollTo(0, document.documentElement.scrollHeight)
+    window.scrollTo(0, allScroll)
     allPrev.data = null
 
     // Prefetch
-    if (allPage > 0) {
-        let id        = Number(action.value)
-        let alllimit  = Number(allSlider.value)
-        prevFetch(prevAll, id, allPage - 1, RenderSpan.All, alllimit)
-    }
+    prevFetch(allPrev, allPage - 1, RenderSpan.All)
 })
 
 allNext.button.addEventListener('mouseover', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
     allNext.data = null
-    let id        = Number(action.value)
-    let alllimit  = Number(allSlider.value)
-    nextFetch(allNext, id, allPage + 1, RenderSpan.All, alllimit)
+    nextFetch(allNext, allPage + 1, RenderSpan.All)
 })
 
 allNext.button.addEventListener('click', (e) => {
-    e.preventDefault()
+    e.stopImmediatePropagation()
     if (allNext.button.disabled) return
-    
+
     if (allPrev.button.disabled)
         allPrev.button.disabled = false
-    allPage++
 
     if (allNext.data == null) {
-        alert(allNext.error)
+        if (allNext.error.message != '') {
+            alert(allNext.error)
+            return
+        }
+        // Prefetch
+        nextFetch(allNext, allPage + 1, RenderSpan.All)
         return
     }
+    allPage++
     
     render.Graph('', allNext.data)
-    window.scrollTo(0, document.documentElement.scrollHeight)
+    window.scrollTo(0, allScroll)
     allNext.data = null
 
     // Prefetch
-    let id        = Number(action.value)
-    let alllimit  = Number(allSlider.value)
-    nextFetch(allNext, id, allPage + 1, RenderSpan.All, alllimit)
+    nextFetch(allNext, allPage + 1, RenderSpan.All)
 })
 
-function prevFetch(prev: PreFetchTrigger, id: Number, page: Number, span: RenderSpan, limit: Number) {
+function prevFetch(prev: PreFetchTrigger, page: Number, span: RenderSpan) {
     let between: string[] = ['', '']
     if (span == RenderSpan.All) {
         between = getBetween()
     }
+    if (page < 0) page = 0
+
+    let id    = Number(action.value)
+    let limit = Number(allSlider.value)
+
     render.DataFetch({
         ID:      id,
         Page:    page,
@@ -705,11 +719,15 @@ function prevFetch(prev: PreFetchTrigger, id: Number, page: Number, span: Render
     })
 }
 
-function nextFetch(next: PreFetchTrigger, id: Number, page: Number, span: RenderSpan, limit: Number) {
+function nextFetch(next: PreFetchTrigger, page: Number, span: RenderSpan) {
     let between: string[] = ['', '']
     if (span == RenderSpan.All) {
         between = getBetween()
     }
+
+    let id    = Number(action.value)
+    let limit = Number(allSlider.value)
+
     render.DataFetch({
         ID:      id,
         Page:    page,
@@ -728,7 +746,7 @@ function nextFetch(next: PreFetchTrigger, id: Number, page: Number, span: Render
         }
         if (json.data.length == 0) {
             next.button.disabled = true
-            throw new Error(`これより以前のデータが存在しませんでした`)
+            return
         }
         next.data = json.data
     })
@@ -782,19 +800,19 @@ action.addEventListener('change', async (e) => {
         alert('タグの切り替え時にエラーが発生しました\n' + error)
         isCaught = true
         action.value = preval
-        if (prevWeek != null)  render.Graph('week-', deepCopy(prevWeek))
-        if (prevMonth != null) render.Graph('month-', deepCopy(prevMonth))
-        if (prevAll != null)   render.Graph('', deepCopy(prevAll))
+        if (prevWeekdata != null)  render.Graph('week-', deepCopy(prevWeekdata))
+        if (prevMonthdata != null) render.Graph('month-', deepCopy(prevMonthdata))
+        if (prevAlldata != null)   render.Graph('', deepCopy(prevAlldata))
     })
 
     if (isCaught) return
 
     // DatePicker
-    if (prevAll != null && prevAll.length > 0) {
+    if (prevAlldata != null && prevAlldata.length > 0) {
         flatpickr(allSpan, {
             mode: 'range',
             maxDate: 'today',
-            minDate: prevAll[0].updated_at
+            minDate: prevAlldata[0].updated_at
         })
     }
 

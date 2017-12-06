@@ -35,7 +35,7 @@ sass:
 
 build:
 	@go generate
-	go build $(server)
+	GOOS=linux go build $(server)
 
 build-cli:
 	@go build $(cli)
