@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/Code-Hex/vegeta/html"
+	"github.com/Code-Hex/vegeta/internal/model"
 	"github.com/Code-Hex/vegeta/internal/session"
-	"github.com/Code-Hex/vegeta/model"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo"

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Code-Hex/vegeta/internal/model"
 	"github.com/Code-Hex/vegeta/internal/utils"
-	"github.com/Code-Hex/vegeta/model"
 	"github.com/Code-Hex/vegeta/protos"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"

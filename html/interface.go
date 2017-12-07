@@ -1,7 +1,7 @@
 package html
 
 import (
-	"github.com/Code-Hex/vegeta/model"
+	"github.com/Code-Hex/vegeta/internal/model"
 )
 
 type (

@@ -12,7 +12,7 @@ import (
 	"syscall"
 
 	static "github.com/Code-Hex/echo-static"
-	"github.com/Code-Hex/vegeta/model"
+	"github.com/Code-Hex/vegeta/internal/model"
 	"github.com/Code-Hex/vegeta/protos"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"golang.org/x/crypto/ssh/terminal"
