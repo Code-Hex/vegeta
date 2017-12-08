@@ -15,14 +15,12 @@
   "author": "CodeHex",
   "license": "GPL-3.0",
   "devDependencies": {
-    "@types/bootstrap-slider": "^9.9.0",
     "@types/c3": "^0.4.44",
     "@types/datatables.net": "^1.10.6",
     "@types/jquery": "^3.2.12",
     "@types/object-assign": "^4.0.30",
     "@types/promise": "^7.1.30",
     "bootstrap": "^4.0.0-alpha.6",
-    "bootstrap-slider": "^10.0.0",
     "browserify": "^14.4.0",
     "c3": "^0.4.18",
     "datatables.net-bs4": "^1.10.16",
@@ -40,11 +38,9 @@
     "jquery": "^3.2.1",
     "json-formatter-js": "^2.2.0",
     "merge-stream": "^1.0.1",
-    "node-bourbon": "^4.2.8",
-    "node-neat": "^2.0.0-beta.0",
-    "paginationjs": "^2.1.0",
     "superagent": "^3.6.0",
-    "typescript": "^2.5.2"
+    "typescript": "^2.5.2",
+    "uglify-js": "^3.2.1"
   },
   "dependencies": {
     "@types/superagent": "^3.5.5"
