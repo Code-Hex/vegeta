@@ -15,7 +15,7 @@ var ts = require('gulp-typescript');
 var tsProject = ts.createProject('tsconfig.json');
 
 // javascript minify
-var uglify = require('gulp-uglify');
+var uglify = require('gulp-uglify-es').default;
 
 // sass compiler
 var sass = require('gulp-sass');
@@ -44,6 +44,11 @@ gulp.task('ts', function() {
   .pipe(tsProject())
   .pipe(browserify({jquery:'jquery-browserify'}))
   .pipe(uglify())
+/*
+  .on('error', function(e){
+      console.log(e)
+   })
+*/
   .pipe(gulp.dest(path.join(assetsPath, 'js/')));
 })
 

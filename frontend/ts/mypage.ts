@@ -262,8 +262,6 @@ interface PreFetchTrigger {
 // WEEK
 //
 
-const weekScroll = 100
-
 var weekReload: PreFetchTrigger = {
     button: <HTMLButtonElement>document.querySelector('#week-pagination .reload'),
     error: new Error()

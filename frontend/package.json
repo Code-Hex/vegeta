@@ -34,13 +34,15 @@
     "gulp-plumber": "^1.1.0",
     "gulp-sass": "^3.1.0",
     "gulp-typescript": "^3.2.2",
-    "gulp-uglify": "^3.0.0",
+    "gulp-uglify-es": "^0.1.8",
     "jquery": "^3.2.1",
     "json-formatter-js": "^2.2.0",
     "merge-stream": "^1.0.1",
+    "node-bourbon": "^4.2.8",
+    "node-neat": "^2.0.0-beta.0",
     "superagent": "^3.6.0",
     "typescript": "^2.5.2",
-    "uglify-js": "^3.2.1"
+    "uglify-es": "^3.2.1"
   },
   "dependencies": {
     "@types/superagent": "^3.5.5"
