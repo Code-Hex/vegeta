@@ -24,7 +24,7 @@ const (
 	version    = "0.0.1"
 	name       = "vegeta-cli"
 	msg        = name + " project to collect large amounts of vegetable data using IoT"
-	targetHost = "neo.ie.u-ryukyu.ac.jp"
+	targetHost = "grpc.neo.ie.u-ryukyu.ac.jp"
 )
 
 func main() {

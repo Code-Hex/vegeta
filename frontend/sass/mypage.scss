@@ -30,6 +30,24 @@ $min-grid: (
   border-radius: 5px;
 }
 
+#week-chart {
+  height: 320px;
+  max-height: 320px;
+  position: relative;
+}
+
+#month-chart {
+  height: 320px;
+  max-height: 320px;
+  position: relative;
+}
+
+#chart {
+  height: 320px;
+  max-height: 320px;
+  position: relative;
+}
+
 .calendar {
   width: 270px;
   text-align: center;

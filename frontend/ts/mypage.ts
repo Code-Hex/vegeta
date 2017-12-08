@@ -108,7 +108,7 @@ class Render {
             p.date = t.replace(render.datePtn, "$1 $2")
             return p
         })
-        let values = Object.keys(jsonary[jsonary.length - 1])
+        let values = Object.keys(jsonary[0])
 
         let chartTag = `#${ prefix }chart`
         let jsonDom = <HTMLInputElement>document.getElementById(`${ prefix }json`)
@@ -120,7 +120,7 @@ class Render {
             data: {
                 x: 'date',
                 xFormat: '%Y-%m-%d %H:%M:%S', // 'xFormat' can be used as custom format of 'x'
-                json: jsonary,
+                json: jsonary.reverse(),
                 keys: {
                     x: 'date', // it's possible to specify 'x' when category axis
                     value: values,
@@ -317,67 +317,25 @@ weekReload.button.addEventListener('click', (e) => {
     e.stopImmediatePropagation()
 
     weekPage = 0
-    weekPrev.button.disabled = true
-    weekNext.button.disabled = false
+    weekNext.button.disabled = true
+    weekPrev.button.disabled = false
 
     if (weekReload.data == null) {
         alert(weekReload.error)
         return
     }
     render.Graph('week-', weekReload.data)
-    window.scrollTo(0, weekScroll)
-})
-
-weekPrev.button.addEventListener('mouseover', (e) => {
-    e.stopImmediatePropagation()
-    weekPrev.data = null
-    prevFetch(weekPrev, weekPage - 1, RenderSpan.Week)
-})
-
-weekPrev.button.addEventListener('click', (e) => {
-    e.stopImmediatePropagation()
-    if (weekPrev.button.disabled) return
-
-    if (weekPrev.data == null) {
-        if (weekPrev.error.message != '') {
-            alert(weekPrev.error)
-            return
-        }
-        // Prefetch
-        prevFetch(weekPrev, weekPage - 1, RenderSpan.Week)
-        return
-    }
-
-    if (weekNext.button.disabled)
-        weekNext.button.disabled = false
-
-    weekPage--
-
-    if (weekPage <= 0) {
-        weekPage = 0
-        weekPrev.button.disabled = true
-    }
-
-    render.Graph('week-', weekPrev.data)
-    window.scrollTo(0, weekScroll)
-    weekPrev.data = null
-
-    // Prefetch
-    prevFetch(weekPrev, weekPage - 1, RenderSpan.Week)
 })
 
 weekNext.button.addEventListener('mouseover', (e) => {
     e.stopImmediatePropagation()
     weekNext.data = null
-    nextFetch(weekNext, weekPage + 1, RenderSpan.Week)
+    prevFetch(weekNext, weekPage - 1, RenderSpan.Week)
 })
 
 weekNext.button.addEventListener('click', (e) => {
     e.stopImmediatePropagation()
     if (weekNext.button.disabled) return
-
-    if (weekPrev.button.disabled)
-        weekPrev.button.disabled = false
 
     if (weekNext.data == null) {
         if (weekNext.error.message != '') {
@@ -385,24 +343,61 @@ weekNext.button.addEventListener('click', (e) => {
             return
         }
         // Prefetch
-        nextFetch(weekNext, weekPage + 1, RenderSpan.Week)
+        prevFetch(weekNext, weekPage - 1, RenderSpan.Week)
+        return
+    }
+
+    if (weekPrev.button.disabled)
+        weekPrev.button.disabled = false
+
+    weekPage--
+
+    if (weekPage <= 0) {
+        weekPage = 0
+        weekNext.button.disabled = true
+    }
+
+    render.Graph('week-', weekNext.data)
+    weekNext.data = null
+
+    // Prefetch
+    prevFetch(weekNext, weekPage - 1, RenderSpan.Week)
+})
+
+weekPrev.button.addEventListener('mouseover', (e) => {
+    e.stopImmediatePropagation()
+    weekPrev.data = null
+    nextFetch(weekPrev, weekPage + 1, RenderSpan.Week)
+})
+
+weekPrev.button.addEventListener('click', (e) => {
+    e.stopImmediatePropagation()
+    if (weekPrev.button.disabled) return
+
+    if (weekNext.button.disabled)
+        weekNext.button.disabled = false
+
+    if (weekPrev.data == null) {
+        if (weekPrev.error.message != '') {
+            alert(weekPrev.error)
+            return
+        }
+        // Prefetch
+        nextFetch(weekPrev, weekPage + 1, RenderSpan.Week)
         return
     }
     weekPage++
     
-    render.Graph('week-', weekNext.data)
-    window.scrollTo(0, weekScroll)
-    weekNext.data = null
+    render.Graph('week-', weekPrev.data)
+    weekPrev.data = null
 
     // Prefetch
-    nextFetch(weekNext, weekPage + 1, RenderSpan.Week)
+    nextFetch(weekPrev, weekPage + 1, RenderSpan.Week)
 })
 
 //
 // MONTH
 //
-
-const monthScroll = document.documentElement.scrollHeight / 2 + 160
 
 var monthReload: PreFetchTrigger = {
     button: <HTMLButtonElement>document.querySelector('#month-pagination .reload'),
@@ -457,67 +452,25 @@ monthReload.button.addEventListener('click', (e) => {
     e.stopImmediatePropagation()
 
     monthPage = 0
-    monthPrev.button.disabled = true
-    monthNext.button.disabled = false
+    monthNext.button.disabled = true
+    monthPrev.button.disabled = false
 
     if (monthReload.data == null) {
         alert(monthReload.error)
         return
     }
     render.Graph('month-', monthReload.data)
-    window.scrollTo(0, monthScroll)
-})
-
-monthPrev.button.addEventListener('mouseover', (e) => {
-    e.stopImmediatePropagation()
-    monthPrev.data = null
-    prevFetch(monthPrev, monthPage - 1, RenderSpan.Month)
-})
-
-monthPrev.button.addEventListener('click', (e) => {
-    e.stopImmediatePropagation()
-    if (monthPrev.button.disabled) return
-
-    if (monthPrev.data == null) {
-        if (monthPrev.error.message != '') {
-            alert(monthPrev.error)
-            return
-        }
-        // Prefetch
-        prevFetch(monthPrev, monthPage - 1, RenderSpan.Month)
-        return
-    }
-
-    if (monthNext.button.disabled)
-        monthNext.button.disabled = false
-
-    monthPage--
-
-    if (monthPage <= 0) {
-        monthPage = 0
-        monthPrev.button.disabled = true
-    }
-
-    render.Graph('month-', monthPrev.data)
-    window.scrollTo(0, monthScroll)
-    monthPrev.data = null
-
-    // Prefetch
-    prevFetch(monthPrev, monthPage - 1, RenderSpan.Month)
 })
 
 monthNext.button.addEventListener('mouseover', (e) => {
     e.stopImmediatePropagation()
     monthNext.data = null
-    nextFetch(monthNext, monthPage + 1, RenderSpan.Month)
+    prevFetch(monthNext, monthPage - 1, RenderSpan.Month)
 })
 
 monthNext.button.addEventListener('click', (e) => {
     e.stopImmediatePropagation()
     if (monthNext.button.disabled) return
-
-    if (monthPrev.button.disabled)
-        monthPrev.button.disabled = false
 
     if (monthNext.data == null) {
         if (monthNext.error.message != '') {
@@ -525,24 +478,61 @@ monthNext.button.addEventListener('click', (e) => {
             return
         }
         // Prefetch
-        nextFetch(monthNext, monthPage + 1, RenderSpan.Month)
+        prevFetch(monthNext, monthPage - 1, RenderSpan.Month)
+        return
+    }
+
+    if (monthPrev.button.disabled)
+        monthPrev.button.disabled = false
+
+    monthPage--
+
+    if (monthPage <= 0) {
+        monthPage = 0
+        monthNext.button.disabled = true
+    }
+
+    render.Graph('month-', monthNext.data)
+    monthNext.data = null
+
+    // Prefetch
+    prevFetch(monthNext, monthPage - 1, RenderSpan.Month)
+})
+
+monthPrev.button.addEventListener('mouseover', (e) => {
+    e.stopImmediatePropagation()
+    monthPrev.data = null
+    nextFetch(monthPrev, monthPage + 1, RenderSpan.Month)
+})
+
+monthPrev.button.addEventListener('click', (e) => {
+    e.stopImmediatePropagation()
+    if (monthPrev.button.disabled) return
+
+    if (monthNext.button.disabled)
+        monthNext.button.disabled = false
+
+    if (monthPrev.data == null) {
+        if (monthPrev.error.message != '') {
+            alert(monthPrev.error)
+            return
+        }
+        // Prefetch
+        nextFetch(monthPrev, monthPage + 1, RenderSpan.Month)
         return
     }
     monthPage++
     
-    render.Graph('month-', monthNext.data)
-    window.scrollTo(0, monthScroll)
-    monthNext.data = null
+    render.Graph('month-', monthPrev.data)
+    monthPrev.data = null
 
     // Prefetch
-    nextFetch(monthNext, monthPage + 1, RenderSpan.Month)
+    nextFetch(monthPrev, monthPage + 1, RenderSpan.Month)
 })
 
 //
 // ALL
 //
-
-const allScroll = document.documentElement.scrollHeight + 180
 
 var allReload: PreFetchTrigger = {
     button: <HTMLButtonElement>document.querySelector('#all-pagination .reload'),
@@ -600,67 +590,25 @@ allReload.button.addEventListener('click', (e) => {
     e.stopImmediatePropagation()
 
     allPage = 0
-    allPrev.button.disabled = true
-    allNext.button.disabled = false
+    allNext.button.disabled = true
+    allPrev.button.disabled = false
 
     if (allReload.data == null) {
         alert(allReload.error)
         return
     }
     render.Graph('', allReload.data)
-    window.scrollTo(0, allScroll)
-})
-
-allPrev.button.addEventListener('mouseover', (e) => {
-    e.stopImmediatePropagation()
-    allPrev.data = null
-    prevFetch(allPrev, allPage - 1, RenderSpan.All)
-})
-
-allPrev.button.addEventListener('click', (e) => {
-    e.stopImmediatePropagation()
-    if (allPrev.button.disabled) return
-
-    if (allPrev.data == null) {
-        if (allPrev.error.message != '') {
-            alert(allPrev.error)
-            return
-        }
-        // Prefetch
-        prevFetch(allPrev, allPage - 1, RenderSpan.All)
-        return
-    }
-
-    if (allNext.button.disabled)
-        allNext.button.disabled = false
-
-    allPage--
-
-    if (allPage <= 0) {
-        allPage = 0
-        allPrev.button.disabled = true
-    }
-
-    render.Graph('', allPrev.data)
-    window.scrollTo(0, allScroll)
-    allPrev.data = null
-
-    // Prefetch
-    prevFetch(allPrev, allPage - 1, RenderSpan.All)
 })
 
 allNext.button.addEventListener('mouseover', (e) => {
     e.stopImmediatePropagation()
     allNext.data = null
-    nextFetch(allNext, allPage + 1, RenderSpan.All)
+    prevFetch(allNext, allPage - 1, RenderSpan.All)
 })
 
 allNext.button.addEventListener('click', (e) => {
     e.stopImmediatePropagation()
     if (allNext.button.disabled) return
-
-    if (allPrev.button.disabled)
-        allPrev.button.disabled = false
 
     if (allNext.data == null) {
         if (allNext.error.message != '') {
@@ -668,17 +616,56 @@ allNext.button.addEventListener('click', (e) => {
             return
         }
         // Prefetch
-        nextFetch(allNext, allPage + 1, RenderSpan.All)
+        prevFetch(allNext, allPage - 1, RenderSpan.All)
+        return
+    }
+
+    if (allPrev.button.disabled)
+        allPrev.button.disabled = false
+
+    allPage--
+
+    if (allPage <= 0) {
+        allPage = 0
+        allNext.button.disabled = true
+    }
+
+    render.Graph('', allNext.data)
+    allNext.data = null
+
+    // Prefetch
+    prevFetch(allNext, allPage - 1, RenderSpan.All)
+})
+
+allPrev.button.addEventListener('mouseover', (e) => {
+    e.stopImmediatePropagation()
+    allPrev.data = null
+    nextFetch(allPrev, allPage + 1, RenderSpan.All)
+})
+
+allPrev.button.addEventListener('click', (e) => {
+    e.stopImmediatePropagation()
+    if (allPrev.button.disabled) return
+
+    if (allNext.button.disabled)
+        allNext.button.disabled = false
+
+    if (allPrev.data == null) {
+        if (allPrev.error.message != '') {
+            alert(allPrev.error)
+            return
+        }
+        // Prefetch
+        nextFetch(allPrev, allPage + 1, RenderSpan.All)
         return
     }
     allPage++
     
-    render.Graph('', allNext.data)
-    window.scrollTo(0, allScroll)
-    allNext.data = null
+    render.Graph('', allPrev.data)
+    allPrev.data = null
 
     // Prefetch
-    nextFetch(allNext, allPage + 1, RenderSpan.All)
+    nextFetch(allPrev, allPage + 1, RenderSpan.All)
 })
 
 function prevFetch(prev: PreFetchTrigger, page: Number, span: RenderSpan) {
@@ -811,15 +798,18 @@ action.addEventListener('change', async (e) => {
     if (prevAlldata != null && prevAlldata.length > 0) {
         flatpickr(allSpan, {
             mode: 'range',
-            maxDate: 'today',
-            minDate: prevAlldata[0].updated_at
+            maxDate: prevAlldata[0].updated_at
         })
     }
 
     // initialize
     allPage = 0
-    allNext.button.disabled = false
-    allPrev.button.disabled = true
+    weekPrev.button.disabled = false
+    weekNext.button.disabled = true
+    monthPrev.button.disabled = false
+    monthNext.button.disabled = true
+    allPrev.button.disabled = false
+    allNext.button.disabled = true
 
     // title change
     title.textContent = `タグ${action[action.selectedIndex].text }のグラフ`

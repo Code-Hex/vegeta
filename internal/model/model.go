@@ -261,6 +261,7 @@ func FindTagByID(db *gorm.DB, id uint) (*Tag, error) {
 type FindDataParam struct {
 	ID, Page, Limit      uint
 	Span, StartAt, EndAt string
+	Asc                  bool
 }
 
 func FindDataByTagID(db *gorm.DB, param FindDataParam) ([]Data, error) {
@@ -284,6 +285,12 @@ func FindDataByTagID(db *gorm.DB, param FindDataParam) ([]Data, error) {
 			)
 		}
 	}
+
+	orderBy := "desc"
+	if param.Asc {
+		orderBy = "asc"
+	}
+
 	query := fmt.Sprintf(`select
 d.id,
 d.created_at,
@@ -293,7 +300,7 @@ d.hostname,
 d.payload from data as d
 left join tags as t on d.tag_id = t.id
 where t.id = ? and d.deleted_at is null %s
-order by d.updated_at limit ? offset ?`, termCondition)
+order by d.updated_at %s limit ? offset ?`, termCondition, orderBy)
 
 	offset := param.Page * param.Limit
 	someData := make([]Data, 0, param.Limit)
