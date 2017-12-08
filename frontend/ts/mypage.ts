@@ -295,13 +295,13 @@ weekReload.button.addEventListener('mouseover', (e) => {
     .then((response: any) => {
         let json = response.body
         if (json === undefined) {
-            throw new Error(`更新すべき全期間のデータの取得に失敗しました`)
+            throw new Error(`更新すべき1週間のデータの取得に失敗しました`)
         }
         if (!json.is_success) {
-            throw new Error(`更新すべき全期間のデータの取得に失敗しました: ${ json.reason }`)
+            throw new Error(`更新すべき1週間のデータの取得に失敗しました: ${ json.reason }`)
         }
         if (json.data.length == 0) {
-            throw new Error(`更新すべき全期間のデータが存在しませんでした`)
+            throw new Error(`更新すべき1週間のデータが存在しませんでした`)
         }
         weekReload.data = json.data
     })
@@ -430,13 +430,13 @@ monthReload.button.addEventListener('mouseover', (e) => {
     .then((response: any) => {
         let json = response.body
         if (json === undefined) {
-            throw new Error(`更新すべき全期間のデータの取得に失敗しました`)
+            throw new Error(`更新すべき1ヶ月のデータの取得に失敗しました`)
         }
         if (!json.is_success) {
-            throw new Error(`更新すべき全期間のデータの取得に失敗しました: ${ json.reason }`)
+            throw new Error(`更新すべき1ヶ月のデータの取得に失敗しました: ${ json.reason }`)
         }
         if (json.data.length == 0) {
-            throw new Error(`更新すべき全期間のデータが存在しませんでした`)
+            throw new Error(`更新すべき1ヶ月のデータが存在しませんでした`)
         }
         monthReload.data = json.data
     })
