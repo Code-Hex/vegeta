@@ -13,13 +13,11 @@ import (
 
 	static "github.com/Code-Hex/echo-static"
 	"github.com/Code-Hex/vegeta/internal/model"
-	"github.com/Code-Hex/vegeta/protos"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"golang.org/x/crypto/ssh/terminal"
 	validator "gopkg.in/go-playground/validator.v9"
 
 	"github.com/jinzhu/gorm"
-	"google.golang.org/grpc"
 
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -29,7 +27,7 @@ import (
 )
 
 const (
-	version = "0.0.2"
+	version = "0.0.3"
 	name    = "vegeta"
 	msg     = name + " project to collect large amounts of vegetable data using IoT"
 )
@@ -41,7 +39,6 @@ type Vegeta struct {
 	*echo.Echo
 	*zap.Logger
 	DB         *gorm.DB
-	GRPC       *grpc.Server
 	waitSignal chan os.Signal
 }
 
@@ -63,7 +60,6 @@ func New() *Vegeta {
 	return &Vegeta{
 		waitSignal: sigch,
 		Echo:       echo.New(),
-		GRPC:       grpc.NewServer(),
 	}
 }
 
@@ -133,30 +129,14 @@ func (v *Vegeta) startServer() {
 	}
 }
 
-func (v *Vegeta) serveGRPC() {
-	protos.RegisterCollectionServer(v.GRPC, v.NewAPI())
-	port := v.Port + 1
-	li, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	if err != nil {
-		v.Error("Failed to get port for grpc", zap.Error(err))
-		return
-	}
-	fmt.Println("Start GRPC Server at", li.Addr().String())
-	if err := v.GRPC.Serve(li); err != nil {
-		v.Error("Failed to serve grpc", zap.Error(err))
-	}
-}
-
 func (v *Vegeta) serve() error {
 	ctx := context.Background()
 	go v.startServer()
-	go v.serveGRPC()
 	return v.wait(ctx)
 }
 
 func (v *Vegeta) wait(ctx context.Context) error {
 	<-v.waitSignal
-	v.GRPC.GracefulStop()
 	return v.Shutdown(ctx)
 }
 

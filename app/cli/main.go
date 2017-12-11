@@ -1,30 +1,39 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
-	"time"
-
-	"github.com/Code-Hex/vegeta/protos"
-	"google.golang.org/grpc"
 
 	"github.com/Code-Hex/vegeta/internal/utils"
 
 	"github.com/pkg/errors"
-	"golang.org/x/net/context"
 )
 
 type CLI struct {
 	Options
 }
 
+type postTagJSON struct {
+	TagName string `json:"tag_name"`
+}
+
+type postDataJSON struct {
+	Payload    string `json:"payload"`
+	Hostname   string `json:"hostname"`
+	RemoteAddr string `json:"remote_addr"`
+	TagName    string `json:"tag_name"`
+}
+
 const (
-	version    = "0.0.1"
+	version    = "0.0.2"
 	name       = "vegeta-cli"
 	msg        = name + " project to collect large amounts of vegetable data using IoT"
-	targetHost = "grpc.neo.ie.u-ryukyu.ac.jp"
+	targetHost = "https://vegeta.neo.ie.u-ryukyu.ac.jp"
 )
 
 func main() {
@@ -61,18 +70,10 @@ func (c *CLI) run() error {
 }
 
 func (c *CLI) exec() error {
-	conn, err := c.setupConnection()
-	if err != nil {
-		return errors.Wrap(err, "Failed to connect grpc")
-	}
-	defer conn.Close()
-	cli := protos.NewCollectionClient(conn)
-
 	// Add tag mode
 	if c.Add {
-		_, err := cli.AddTag(context.Background(), &protos.AddTagFromDevice{
+		err := c.postRequest("/api/tag", &postTagJSON{
 			TagName: c.Tag,
-			Token:   c.Token,
 		})
 		if err != nil {
 			return errors.Wrap(err, "Failed to add tag")
@@ -102,12 +103,11 @@ func (c *CLI) exec() error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to get hostname")
 	}
-	_, err = cli.AddData(context.Background(), &protos.RequestFromDevice{
+	err = c.postRequest("/api/data", &postDataJSON{
 		TagName:    c.Tag,
 		Payload:    jsonStr,
 		RemoteAddr: addr,
 		Hostname:   host,
-		Token:      c.Token,
 	})
 	if err != nil {
 		return errors.Wrap(err, "Failed to send data")
@@ -116,23 +116,11 @@ func (c *CLI) exec() error {
 	return nil
 }
 
-func (c *CLI) setupConnection() (*grpc.ClientConn, error) {
-	// Setup grpc stub
-	var addr string
-	if isDevelopment() {
-		addr = fmt.Sprintf("localhost:%d", c.Port)
-	} else {
-		addr = fmt.Sprintf("%s:%d", targetHost, c.Port)
-	}
-	return grpc.Dial(addr, grpc.WithInsecure(), grpc.WithTimeout(5*time.Second))
-}
-
 func (c *CLI) prepare() error {
 	_, err := parseOptions(&c.Options, os.Args[1:])
 	if err != nil {
 		return errors.Wrap(err, "Failed to parse command line args")
 	}
-	c.Port = c.Options.Port
 	return nil
 }
 
@@ -153,6 +141,24 @@ func parseOptions(opts *Options, argv []string) ([]string, error) {
 	return o, nil
 }
 
-func isDevelopment() bool {
-	return os.Getenv("STAGE") == "development"
+func (c *CLI) postRequest(url string, v interface{}) error {
+	body := new(bytes.Buffer)
+	if err := json.NewEncoder(body).Encode(v); err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", targetHost+url, body)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Add("Authorization", "Bearer "+c.Token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+
+	return nil
 }

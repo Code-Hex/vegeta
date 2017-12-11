@@ -59,8 +59,10 @@ func (v *Vegeta) registerRoutes() {
 			})
 		},
 	)
-	api.POST("/data", GetDataList())
-	api.POST("/tags", GetTagList())
+	api.GET("/data", GetDataList())
+	api.GET("/tags", GetTagList())
+	api.POST("/data", PostData())
+	api.POST("/tag", PostTag())
 
 	auth := v.Group("/mypage")
 	auth.Use(

@@ -1,20 +1,17 @@
 package vegeta
 
 import (
-	"context"
 	"crypto/subtle"
 	"fmt"
 	"net/http"
 
 	"github.com/Code-Hex/vegeta/internal/model"
 	"github.com/Code-Hex/vegeta/internal/utils"
-	"github.com/Code-Hex/vegeta/protos"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
@@ -28,52 +25,68 @@ const (
 	all
 )
 
-/* grpc */
-func (v *Vegeta) NewAPI() *API {
-	return &API{DB: v.DB}
-}
-
-func (a *API) AddData(ctx context.Context, r *protos.RequestFromDevice) (*protos.ResultResponse, error) {
-	token := r.GetToken()
-	user, err := model.TokenAuth(a.DB, token)
-	if err != nil {
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-	tag, err := user.FindByTagName(a.DB, r.GetTagName())
-	if err != nil {
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-	data := model.Data{
-		RemoteAddr: r.GetRemoteAddr(),
-		Payload:    r.GetPayload(),
-		Hostname:   r.GetHostname(),
-	}
-	if err := tag.AddData(a.DB, data); err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	return &protos.ResultResponse{}, nil
-}
-
-func (a *API) AddTag(ctx context.Context, r *protos.AddTagFromDevice) (*protos.ResultResponse, error) {
-	token := r.GetToken()
-	user, err := model.TokenAuth(a.DB, token)
-	if err != nil {
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-	tag := r.GetTagName()
-	if _, err := user.FindByTagName(a.DB, tag); err == nil {
-		return nil, status.Error(
-			codes.NotFound,
-			fmt.Sprintf("Tag: %s is already exists", tag),
-		)
-	}
-	if err := user.AddTag(a.DB, tag); err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	return &protos.ResultResponse{}, nil
-}
-
 /* Public JSON API */
+type postTagJSON struct {
+	TagName string `json:"tag_name"`
+}
+
+func PostTag() echo.HandlerFunc {
+	return call(func(c *Context) error {
+		param := new(postTagJSON)
+		if err := c.BindValidate(param); err != nil {
+			return err
+		}
+		user, ok := c.Get("user").(*model.User)
+		if !ok {
+			return errors.New("Failed to get user info via context")
+		}
+		tag := param.TagName
+		if _, err := user.FindByTagName(c.DB, tag); err == nil {
+			return status.Error(
+				http.StatusNotFound,
+				fmt.Sprintf("Tag: %s is already exists", tag),
+			)
+		}
+		if err := user.AddTag(c.DB, tag); err != nil {
+			return status.Error(http.StatusInternalServerError, err.Error())
+		}
+		return nil
+	})
+}
+
+type postDataJSON struct {
+	Payload    string `json:"payload"`
+	Hostname   string `json:"hostname"`
+	RemoteAddr string `json:"remote_addr"`
+	TagName    string `json:"tag_name"`
+}
+
+func PostData() echo.HandlerFunc {
+	return call(func(c *Context) error {
+		param := new(postDataJSON)
+		if err := c.BindValidate(param); err != nil {
+			return err
+		}
+		user, ok := c.Get("user").(*model.User)
+		if !ok {
+			return errors.New("Failed to get user info via context")
+		}
+		tag, err := user.FindByTagName(c.DB, param.TagName)
+		if err != nil {
+			return status.Error(http.StatusNotFound, err.Error())
+		}
+		data := model.Data{
+			RemoteAddr: param.RemoteAddr,
+			Payload:    param.Payload,
+			Hostname:   param.Hostname,
+		}
+		if err := tag.AddData(c.DB, data); err != nil {
+			return status.Error(http.StatusInternalServerError, err.Error())
+		}
+		return nil
+	})
+}
+
 type resultGetTagList struct {
 	Tags []string `json:"tags"`
 }
