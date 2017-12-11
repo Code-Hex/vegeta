@@ -17,6 +17,7 @@ type Options struct {
 	Help       bool   `short:"h" long:"help" description:"show this message"`
 	Version    bool   `short:"v" long:"version" description:"print the version"`
 	Add        bool   `short:"a" long:"add" description:"add tag mode"`
+	Remove     bool   `short:"r" long:"remove" description:"remove tag mode"`
 	Tag        string `short:"t" long:"tag" description:"specify the tag name to manage data" required:"true"`
 	Token      string `long:"token" description:"specify the registerd user token" required:"true"`
 	StackTrace bool   `long:"trace" description:"display detail error messages"`

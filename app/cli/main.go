@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Code-Hex/vegeta/internal/common"
 	"github.com/Code-Hex/vegeta/internal/utils"
 
 	"github.com/pkg/errors"
@@ -16,17 +17,6 @@ import (
 
 type CLI struct {
 	Options
-}
-
-type postTagJSON struct {
-	TagName string `json:"tag_name"`
-}
-
-type postDataJSON struct {
-	Payload    string `json:"payload"`
-	Hostname   string `json:"hostname"`
-	RemoteAddr string `json:"remote_addr"`
-	TagName    string `json:"tag_name"`
 }
 
 const (
@@ -72,11 +62,20 @@ func (c *CLI) run() error {
 func (c *CLI) exec() error {
 	// Add tag mode
 	if c.Add {
-		err := c.postRequest("/api/tag", &postTagJSON{
+		err := c.postRequest("/api/tag", &common.TagJSON{
 			TagName: c.Tag,
 		})
 		if err != nil {
 			return errors.Wrap(err, "Failed to add tag")
+		}
+		fmt.Println("Send Complete")
+		return nil
+	}
+
+	if c.Remove {
+		err := c.deleteRequest("/api/tag/" + c.Tag)
+		if err != nil {
+			return errors.Wrap(err, "Failed to remove tag")
 		}
 		fmt.Println("Send Complete")
 		return nil
@@ -103,7 +102,7 @@ func (c *CLI) exec() error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to get hostname")
 	}
-	err = c.postRequest("/api/data", &postDataJSON{
+	err = c.postRequest("/api/data", &common.PostDataJSON{
 		TagName:    c.Tag,
 		Payload:    jsonStr,
 		RemoteAddr: addr,
@@ -158,7 +157,42 @@ func (c *CLI) postRequest(url string, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
+
+	d := &common.ResultJSON{}
+	if err := json.NewDecoder(resp.Body).Decode(d); err != nil {
+		return err
+	}
+
+	if !d.IsSuccess {
+		return errors.New(d.Reason)
+	}
+
+	return nil
+}
+
+func (c *CLI) deleteRequest(url string) error {
+	req, err := http.NewRequest("DELETE", targetHost+url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Add("Authorization", "Bearer "+c.Token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	d := &common.ResultJSON{}
+	if err := json.NewDecoder(resp.Body).Decode(d); err != nil {
+		return err
+	}
+
+	if !d.IsSuccess {
+		return errors.New(d.Reason)
+	}
 
 	return nil
 }

@@ -63,6 +63,7 @@ func (v *Vegeta) registerRoutes() {
 	api.GET("/tags", GetTagList())
 	api.POST("/data", PostData())
 	api.POST("/tag", PostTag())
+	api.DELETE("/tag/:name", DeleteTag())
 
 	auth := v.Group("/mypage")
 	auth.Use(
