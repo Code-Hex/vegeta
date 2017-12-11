@@ -19,6 +19,7 @@ type Options struct {
 	Add        bool   `short:"a" long:"add" description:"add tag mode"`
 	Remove     bool   `short:"r" long:"remove" description:"remove tag mode"`
 	Tag        string `short:"t" long:"tag" description:"specify the tag name to manage data" required:"true"`
+	URL        string `long:"url" description:"specify the base url of request destination" required:"true"`
 	Token      string `long:"token" description:"specify the registerd user token" required:"true"`
 	StackTrace bool   `long:"trace" description:"display detail error messages"`
 }

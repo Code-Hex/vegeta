@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -20,10 +21,11 @@ type CLI struct {
 }
 
 const (
-	version    = "0.0.2"
-	name       = "vegeta-cli"
-	msg        = name + " project to collect large amounts of vegetable data using IoT"
-	targetHost = "https://vegeta.neo.ie.u-ryukyu.ac.jp"
+	version      = "0.0.2"
+	name         = "vegeta-cli"
+	msg          = name + " project to collect large amounts of vegetable data using IoT"
+	targetHost   = "https://vegeta.neo.ie.u-ryukyu.ac.jp"
+	completedMsg = "Send Complete"
 )
 
 func main() {
@@ -56,6 +58,7 @@ func (c *CLI) run() error {
 	if err := c.exec(); err != nil {
 		return errors.Wrap(err, "Failed to exec")
 	}
+	fmt.Println(completedMsg)
 	return nil
 }
 
@@ -68,16 +71,15 @@ func (c *CLI) exec() error {
 		if err != nil {
 			return errors.Wrap(err, "Failed to add tag")
 		}
-		fmt.Println("Send Complete")
 		return nil
 	}
 
+	// Remove tag mode
 	if c.Remove {
 		err := c.deleteRequest("/api/tag/" + c.Tag)
 		if err != nil {
 			return errors.Wrap(err, "Failed to remove tag")
 		}
-		fmt.Println("Send Complete")
 		return nil
 	}
 
@@ -111,7 +113,6 @@ func (c *CLI) exec() error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to send data")
 	}
-	fmt.Println("Send complete")
 	return nil
 }
 
@@ -140,42 +141,48 @@ func parseOptions(opts *Options, argv []string) ([]string, error) {
 	return o, nil
 }
 
-func (c *CLI) postRequest(url string, v interface{}) error {
+func (c *CLI) postRequest(path string, v interface{}) error {
+	url, err := c.makeURL(path)
+	if err != nil {
+		return errors.Wrap(err, "Failed to make URL")
+	}
 	body := new(bytes.Buffer)
 	if err := json.NewEncoder(body).Encode(v); err != nil {
 		return err
 	}
-
-	req, err := http.NewRequest("POST", targetHost+url, body)
+	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.Header.Add("Authorization", "Bearer "+c.Token)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	d := &common.ResultJSON{}
-	if err := json.NewDecoder(resp.Body).Decode(d); err != nil {
-		return err
-	}
-
-	if !d.IsSuccess {
-		return errors.New(d.Reason)
-	}
-
-	return nil
+	return c.sendRequest(req)
 }
 
-func (c *CLI) deleteRequest(url string) error {
-	req, err := http.NewRequest("DELETE", targetHost+url, nil)
+func (c *CLI) deleteRequest(path string) error {
+	url, err := c.makeURL(path)
+	if err != nil {
+		return errors.Wrap(err, "Failed to make URL")
+	}
+	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return err
 	}
+	return c.sendRequest(req)
+}
+
+func (c *CLI) makeURL(path string) (string, error) {
+	u, err := url.Parse(path)
+	if err != nil {
+		return "", err
+	}
+	base, err := url.Parse(c.URL)
+	if err != nil {
+		return "", err
+	}
+	url := base.ResolveReference(u).String()
+	fmt.Println("Request to " + url)
+	return url, nil
+}
+func (c *CLI) sendRequest(req *http.Request) error {
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.Header.Add("Authorization", "Bearer "+c.Token)
 
@@ -193,6 +200,5 @@ func (c *CLI) deleteRequest(url string) error {
 	if !d.IsSuccess {
 		return errors.New(d.Reason)
 	}
-
 	return nil
 }
