@@ -1,19 +1,19 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
-	"time"
 
-	"github.com/Code-Hex/vegeta/protos"
-	"google.golang.org/grpc"
-
+	"github.com/Code-Hex/vegeta/internal/common"
 	"github.com/Code-Hex/vegeta/internal/utils"
 
 	"github.com/pkg/errors"
-	"golang.org/x/net/context"
 )
 
 type CLI struct {
@@ -21,10 +21,11 @@ type CLI struct {
 }
 
 const (
-	version    = "0.0.1"
-	name       = "vegeta-cli"
-	msg        = name + " project to collect large amounts of vegetable data using IoT"
-	targetHost = "grpc.neo.ie.u-ryukyu.ac.jp"
+	version      = "0.0.2"
+	name         = "vegeta-cli"
+	msg          = name + " project to collect large amounts of vegetable data using IoT"
+	targetHost   = "https://vegeta.neo.ie.u-ryukyu.ac.jp"
+	completedMsg = "Send Complete"
 )
 
 func main() {
@@ -57,27 +58,28 @@ func (c *CLI) run() error {
 	if err := c.exec(); err != nil {
 		return errors.Wrap(err, "Failed to exec")
 	}
+	fmt.Println(completedMsg)
 	return nil
 }
 
 func (c *CLI) exec() error {
-	conn, err := c.setupConnection()
-	if err != nil {
-		return errors.Wrap(err, "Failed to connect grpc")
-	}
-	defer conn.Close()
-	cli := protos.NewCollectionClient(conn)
-
 	// Add tag mode
 	if c.Add {
-		_, err := cli.AddTag(context.Background(), &protos.AddTagFromDevice{
+		err := c.postRequest("/api/tag", &common.TagJSON{
 			TagName: c.Tag,
-			Token:   c.Token,
 		})
 		if err != nil {
 			return errors.Wrap(err, "Failed to add tag")
 		}
-		fmt.Println("Send Complete")
+		return nil
+	}
+
+	// Remove tag mode
+	if c.Remove {
+		err := c.deleteRequest("/api/tag/" + c.Tag)
+		if err != nil {
+			return errors.Wrap(err, "Failed to remove tag")
+		}
 		return nil
 	}
 
@@ -102,29 +104,16 @@ func (c *CLI) exec() error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to get hostname")
 	}
-	_, err = cli.AddData(context.Background(), &protos.RequestFromDevice{
+	err = c.postRequest("/api/data", &common.PostDataJSON{
 		TagName:    c.Tag,
 		Payload:    jsonStr,
 		RemoteAddr: addr,
 		Hostname:   host,
-		Token:      c.Token,
 	})
 	if err != nil {
 		return errors.Wrap(err, "Failed to send data")
 	}
-	fmt.Println("Send complete")
 	return nil
-}
-
-func (c *CLI) setupConnection() (*grpc.ClientConn, error) {
-	// Setup grpc stub
-	var addr string
-	if isDevelopment() {
-		addr = fmt.Sprintf("localhost:%d", c.Port)
-	} else {
-		addr = fmt.Sprintf("%s:%d", targetHost, c.Port)
-	}
-	return grpc.Dial(addr, grpc.WithInsecure(), grpc.WithTimeout(5*time.Second))
 }
 
 func (c *CLI) prepare() error {
@@ -132,7 +121,6 @@ func (c *CLI) prepare() error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to parse command line args")
 	}
-	c.Port = c.Options.Port
 	return nil
 }
 
@@ -153,6 +141,64 @@ func parseOptions(opts *Options, argv []string) ([]string, error) {
 	return o, nil
 }
 
-func isDevelopment() bool {
-	return os.Getenv("STAGE") == "development"
+func (c *CLI) postRequest(path string, v interface{}) error {
+	url, err := c.makeURL(path)
+	if err != nil {
+		return errors.Wrap(err, "Failed to make URL")
+	}
+	body := new(bytes.Buffer)
+	if err := json.NewEncoder(body).Encode(v); err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", url, body)
+	if err != nil {
+		return err
+	}
+	return c.sendRequest(req)
+}
+
+func (c *CLI) deleteRequest(path string) error {
+	url, err := c.makeURL(path)
+	if err != nil {
+		return errors.Wrap(err, "Failed to make URL")
+	}
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+	return c.sendRequest(req)
+}
+
+func (c *CLI) makeURL(path string) (string, error) {
+	u, err := url.Parse(path)
+	if err != nil {
+		return "", err
+	}
+	base, err := url.Parse(c.URL)
+	if err != nil {
+		return "", err
+	}
+	url := base.ResolveReference(u).String()
+	fmt.Println("Request to " + url)
+	return url, nil
+}
+func (c *CLI) sendRequest(req *http.Request) error {
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Add("Authorization", "Bearer "+c.Token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	d := &common.ResultJSON{}
+	if err := json.NewDecoder(resp.Body).Decode(d); err != nil {
+		return err
+	}
+
+	if !d.IsSuccess {
+		return errors.New(d.Reason)
+	}
+	return nil
 }

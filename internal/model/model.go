@@ -193,7 +193,7 @@ func FindUserByName(db *gorm.DB, name string) (*User, error) {
 	return user, nil
 }
 
-func IsValidString(str string) bool {
+func isValidString(str string) bool {
 	if str == "" {
 		return false
 	}
@@ -218,7 +218,7 @@ func (u *User) ReGenerateUserToken(db *gorm.DB) (*User, error) {
 
 func (u *User) AddTag(db *gorm.DB, name string) error {
 	tag := &Tag{Name: name}
-	if !IsValidString(tag.Name) {
+	if !isValidString(tag.Name) {
 		return errors.Errorf("Invalid tag name: %s", tag.Name)
 	}
 	if !db.Find(&Tag{}, "name = ? and user_id = ?", tag.Name, u.ID).RecordNotFound() {
@@ -233,6 +233,22 @@ func (u *User) AddTag(db *gorm.DB, name string) error {
 	if err := asn.Append(tag).Error; err != nil {
 		tx.Rollback()
 		return err
+	}
+	tx.Commit()
+	return nil
+}
+
+func (u *User) RemoveTag(db *gorm.DB, name string) error {
+	if !isValidString(name) {
+		return errors.Errorf("Invalid tag name: %s", name)
+	}
+	if db.Find(&Tag{}, "name = ? and user_id = ?", name, u.ID).RecordNotFound() {
+		return errors.Errorf("Tag %s is not found", name)
+	}
+	tx := db.Begin()
+	if err := tx.Delete(&Tag{}, "name = ? and user_id = ?", name, u.ID).Error; err != nil {
+		tx.Rollback()
+		return errors.Wrap(err, "Failed to delete tag")
 	}
 	tx.Commit()
 	return nil

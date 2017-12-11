@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Code-Hex/vegeta/html"
+	"github.com/Code-Hex/vegeta/internal/common"
 	"github.com/Code-Hex/vegeta/internal/model"
 	"github.com/Code-Hex/vegeta/internal/session"
 	jwt "github.com/dgrijalva/jwt-go"
@@ -77,13 +78,13 @@ func (c *Context) CreateAPIToken(username string) (string, error) {
 func (c *Context) BindValidate(i interface{}) error {
 	if err := c.Bind(i); err != nil {
 		c.Zap.Error("Failed to bind from json", zap.Error(err))
-		return c.JSON(http.StatusOK, &resultJSON{
+		return c.JSON(http.StatusOK, &common.ResultJSON{
 			Reason: "リクエスト内容を取得できませんでした: " + err.Error(),
 		})
 	}
 	if err := c.Validate(i); err != nil {
 		c.Zap.Error("Failed to validate json", zap.Error(err))
-		return c.JSON(http.StatusOK, &resultJSON{
+		return c.JSON(http.StatusOK, &common.ResultJSON{
 			Reason: "入力に誤りがあります: " + err.Error(),
 		})
 	}

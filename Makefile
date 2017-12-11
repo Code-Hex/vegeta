@@ -13,26 +13,6 @@ import = github.com/Code-Hex/$(project)
 port = 8080
 pid = $(PWD)/$(project).pid
 
-proto-plugin:
-	@protoc -I/usr/local/include -Iprotos \
-			-I$(GOPATH)/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
-			--go_out=plugins=grpc:protos collection.proto
-
-# proto-gateway:
-#	@protoc -I/usr/local/include -Iprotos \
-#			-I$(GOPATH)/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
-#			--grpc-gateway_out=logtostderr=true:protos collection.proto
-
-# proto-swagger:
-#	@protoc -I/usr/local/include -Iprotos \
-#			-I$(GOPATH)/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
-#			--swagger_out=logtostderr=true:protos collection.proto
-
-proto: proto-plugin # proto-gateway proto-swagger
-
-sass:
-	@cd frontend && gulp sass
-
 build:
 	@go generate
 	GOOS=linux go build $(server)

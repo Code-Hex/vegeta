@@ -1,26 +1,17 @@
 package vegeta
 
 import (
-	"context"
 	"crypto/subtle"
-	"fmt"
 	"net/http"
 
+	"github.com/Code-Hex/vegeta/internal/common"
 	"github.com/Code-Hex/vegeta/internal/model"
 	"github.com/Code-Hex/vegeta/internal/utils"
-	"github.com/Code-Hex/vegeta/protos"
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
-
-type API struct {
-	DB *gorm.DB
-}
 
 const (
 	week uint = iota + 1
@@ -28,52 +19,79 @@ const (
 	all
 )
 
-/* grpc */
-func (v *Vegeta) NewAPI() *API {
-	return &API{DB: v.DB}
-}
-
-func (a *API) AddData(ctx context.Context, r *protos.RequestFromDevice) (*protos.ResultResponse, error) {
-	token := r.GetToken()
-	user, err := model.TokenAuth(a.DB, token)
-	if err != nil {
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-	tag, err := user.FindByTagName(a.DB, r.GetTagName())
-	if err != nil {
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-	data := model.Data{
-		RemoteAddr: r.GetRemoteAddr(),
-		Payload:    r.GetPayload(),
-		Hostname:   r.GetHostname(),
-	}
-	if err := tag.AddData(a.DB, data); err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	return &protos.ResultResponse{}, nil
-}
-
-func (a *API) AddTag(ctx context.Context, r *protos.AddTagFromDevice) (*protos.ResultResponse, error) {
-	token := r.GetToken()
-	user, err := model.TokenAuth(a.DB, token)
-	if err != nil {
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-	tag := r.GetTagName()
-	if _, err := user.FindByTagName(a.DB, tag); err == nil {
-		return nil, status.Error(
-			codes.NotFound,
-			fmt.Sprintf("Tag: %s is already exists", tag),
-		)
-	}
-	if err := user.AddTag(a.DB, tag); err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	return &protos.ResultResponse{}, nil
-}
-
 /* Public JSON API */
+func DeleteTag() echo.HandlerFunc {
+	return call(func(c *Context) error {
+		user, ok := c.Get("user").(*model.User)
+		if !ok {
+			return errors.New("Failed to get user info via context")
+		}
+		tag := c.Param("name")
+		if err := user.RemoveTag(c.DB, tag); err != nil {
+			return c.JSON(http.StatusBadRequest, &common.ResultJSON{
+				Reason: err.Error(),
+			})
+		}
+		return c.JSON(http.StatusOK, &common.ResultJSON{
+			IsSuccess: true,
+		})
+	})
+}
+
+func PostTag() echo.HandlerFunc {
+	return call(func(c *Context) error {
+		param := new(common.TagJSON)
+		if err := c.BindValidate(param); err != nil {
+			return err
+		}
+		user, ok := c.Get("user").(*model.User)
+		if !ok {
+			return errors.New("Failed to get user info via context")
+		}
+		tag := param.TagName
+		if err := user.AddTag(c.DB, tag); err != nil {
+			return c.JSON(http.StatusBadRequest, &common.ResultJSON{
+				Reason: err.Error(),
+			})
+		}
+		return c.JSON(http.StatusOK, &common.ResultJSON{
+			IsSuccess: true,
+		})
+	})
+}
+
+func PostData() echo.HandlerFunc {
+	return call(func(c *Context) error {
+		param := new(common.PostDataJSON)
+		if err := c.BindValidate(param); err != nil {
+			return err
+		}
+		user, ok := c.Get("user").(*model.User)
+		if !ok {
+			return errors.New("Failed to get user info via context")
+		}
+		tag, err := user.FindByTagName(c.DB, param.TagName)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, &common.ResultJSON{
+				Reason: err.Error(),
+			})
+		}
+		data := model.Data{
+			RemoteAddr: param.RemoteAddr,
+			Payload:    param.Payload,
+			Hostname:   param.Hostname,
+		}
+		if err := tag.AddData(c.DB, data); err != nil {
+			return c.JSON(http.StatusBadRequest, &common.ResultJSON{
+				Reason: err.Error(),
+			})
+		}
+		return c.JSON(http.StatusOK, &common.ResultJSON{
+			IsSuccess: true,
+		})
+	})
+}
+
 type resultGetTagList struct {
 	Tags []string `json:"tags"`
 }
@@ -95,12 +113,12 @@ func GetTagList() echo.HandlerFunc {
 }
 
 type getDataList struct {
-	Tag     string `json:"tag" validate:"required"`
-	Span    string `json:"span" validate:"required"`
-	Limit   uint   `json:"limit" validate:"required"`
-	Page    uint   `json:"page"`
-	StartAt string `json:"start_at"`
-	EndAt   string `json:"end_at"`
+	Tag     string `query:"tag" validate:"required"`
+	Span    string `query:"span" validate:"required"`
+	Limit   uint   `query:"limit" validate:"required"`
+	Page    uint   `query:"page"`
+	StartAt string `query:"start_at"`
+	EndAt   string `query:"end_at"`
 }
 
 type resultGetDataList struct {
@@ -147,17 +165,12 @@ type apiVegetaClaims struct {
 	jwt.StandardClaims
 }
 
-type resultJSON struct {
-	IsSuccess bool   `json:"is_success"`
-	Reason    string `json:"reason"`
-}
-
 func RegenerateToken() echo.HandlerFunc {
 	return call(func(c *Context) error {
 		token, ok := c.Get("auth_api").(*jwt.Token)
 		if !ok {
 			c.Zap.Info("Failed to check user has a permission")
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: "APIトークンにユーザーの情報がありませんでした",
 			})
 		}
@@ -165,17 +178,17 @@ func RegenerateToken() echo.HandlerFunc {
 		user, err := model.FindUserByName(c.DB, claim.Name)
 		if err != nil {
 			c.Zap.Info("Failed to get user at /regenerate")
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: "トークンの更新に失敗しました",
 			})
 		}
 		if _, err := user.ReGenerateUserToken(c.DB); err != nil {
 			c.Zap.Info("Failed to regenerate token at /regenerate", zap.Error(err))
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: "トークンの更新に失敗しました",
 			})
 		}
-		return c.JSON(http.StatusOK, &resultJSON{
+		return c.JSON(http.StatusOK, &common.ResultJSON{
 			IsSuccess: true,
 		})
 	})
@@ -195,14 +208,14 @@ func ReRegisterPassword() echo.HandlerFunc {
 		password := param.Password
 		verifyPassword := param.VerifyPassword
 		if subtle.ConstantTimeCompare([]byte(password), []byte(verifyPassword)) != 1 {
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: "入力したパスワードと確認用のパスワードが一致しませんでした。",
 			})
 		}
 		token, ok := c.Get("auth_api").(*jwt.Token)
 		if !ok {
 			c.Zap.Info("Failed to check user has a permission")
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: "ユーザーの情報がありませんでした",
 			})
 		}
@@ -210,17 +223,17 @@ func ReRegisterPassword() echo.HandlerFunc {
 		user, err := model.FindUserByName(c.DB, claim.Name)
 		if err != nil {
 			c.Zap.Info("Failed to get user at /reregister_password", zap.Error(err))
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: err.Error(),
 			})
 		}
 		if _, err := user.UpdatePassword(c.DB, password); err != nil {
 			c.Zap.Info("Failed to get user at /reregister_password", zap.Error(err))
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: err.Error(),
 			})
 		}
-		return c.JSON(http.StatusOK, &resultJSON{
+		return c.JSON(http.StatusOK, &common.ResultJSON{
 			IsSuccess: true,
 		})
 	})
@@ -240,7 +253,7 @@ func AddTag() echo.HandlerFunc {
 		token, ok := c.Get("auth_api").(*jwt.Token)
 		if !ok {
 			c.Zap.Info("Failed to check user has a permission")
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: "APIトークンにユーザーの情報がありませんでした",
 			})
 		}
@@ -248,17 +261,17 @@ func AddTag() echo.HandlerFunc {
 		user, err := model.FindUserByName(c.DB, claim.Name)
 		if err != nil {
 			c.Zap.Info("Failed to get user at /regenerate")
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: "トークンの更新に失敗しました",
 			})
 		}
 
 		if err := user.AddTag(c.DB, param.Name); err != nil {
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: err.Error(),
 			})
 		}
-		return c.JSON(http.StatusOK, &resultJSON{
+		return c.JSON(http.StatusOK, &common.ResultJSON{
 			IsSuccess: true,
 		})
 	})
@@ -300,7 +313,7 @@ func JSONTagsData() echo.HandlerFunc {
 				zap.Error(err),
 				zap.Uint("tag_id", param.TagID),
 			)
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: "データを取得するときにエラーが発生しました",
 			})
 		}
@@ -330,7 +343,7 @@ func JSONCreateUser() echo.HandlerFunc {
 		password := param.Password
 		verifyPassword := param.VerifyPassword
 		if subtle.ConstantTimeCompare([]byte(password), []byte(verifyPassword)) != 1 {
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: "入力したパスワードと確認用のパスワードが一致しませんでした。",
 			})
 		}
@@ -338,11 +351,11 @@ func JSONCreateUser() echo.HandlerFunc {
 		isAdmin := param.IsAdmin
 		if _, err := model.CreateUser(c.DB, username, password, isAdmin); err != nil {
 			c.Zap.Error("Failed to create user", zap.Error(err))
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: "ユーザー作成時にエラーが発生しました。",
 			})
 		}
-		return c.JSON(http.StatusOK, &resultJSON{
+		return c.JSON(http.StatusOK, &common.ResultJSON{
 			IsSuccess: true,
 		})
 	})
@@ -372,17 +385,17 @@ func JSONEditUser() echo.HandlerFunc {
 
 		if _, err := model.EditUser(c.DB, userID, isAdmin, str); err != nil {
 			c.Zap.Error("Failed to edit user", zap.Error(err))
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: "ユーザー編集時にエラーが発生しました。",
 			})
 		}
 		if isResetPassword {
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				IsSuccess: true,
 				Reason:    str,
 			})
 		}
-		return c.JSON(http.StatusOK, &resultJSON{
+		return c.JSON(http.StatusOK, &common.ResultJSON{
 			IsSuccess: true,
 		})
 	})
@@ -402,11 +415,11 @@ func JSONDeleteUser() echo.HandlerFunc {
 		userID := deleteUser.ID
 		if _, err := model.DeleteUser(c.DB, userID); err != nil {
 			c.Zap.Error("Failed to delete user", zap.Error(err))
-			return c.JSON(http.StatusOK, &resultJSON{
+			return c.JSON(http.StatusOK, &common.ResultJSON{
 				Reason: "ユーザー削除時にエラーが発生しました。",
 			})
 		}
-		return c.JSON(http.StatusOK, &resultJSON{
+		return c.JSON(http.StatusOK, &common.ResultJSON{
 			IsSuccess: true,
 		})
 	})
